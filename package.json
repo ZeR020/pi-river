@@ -1,0 +1,1 @@
+{"name": "pi-river", "version": "0.1.0", "private": true, "description": "River.ai provider for Pi", "type": "module", "keywords": ["pi-package"], "repository": {"type": "git", "url": "git+https://github.com/ZeR020/pi-river.git"}, "pi": {"extensions": ["./index.ts"]}, "scripts": {"test": "bash test.sh"}, "peerDependencies": {"@earendil-works/pi-coding-agent": "*"}}
