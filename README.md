@@ -22,9 +22,10 @@ Set `RIVER_API_KEY` in the environment, or run `/login river` and enter your `rv
 
 Model selection uses Pi's normal model picker under the `river` provider.
 
-- Documented IDs (for example `deepseek-ai/DeepSeek-V4.1-Flash`, `zai-org/GLM-5.3-Flash`, `nvidia/NVIDIA-Nemotron-3.5-Super-VL-120B-A12B-NVFP4`) get River's documented pricing and context: 1,048,576 context; 384,000 output for DeepSeek, 128,000 for GLM and Nemotron. Reasoning controls: GLM Low/High/Max, DeepSeek Off/High/Max (Off sent as `none`), Nemotron automatic only (no effort parameter, always-on).
+- Documented IDs (for example `deepseek-ai/DeepSeek-V4.1-Flash`, `deepseek-ai/DeepSeek-V4.1-Flash-1017`, `zai-org/GLM-5.3-Flash`, `nvidia/NVIDIA-Nemotron-3.5-Super-VL-120B-A12B-NVFP4`) get River's documented pricing and context: 1,048,576 context; 384,000 output for DeepSeek, 128,000 for GLM and Nemotron. Reasoning controls: GLM Low/High/Max, DeepSeek Off/High/Max (Off sent as `none`), Nemotron automatic only (no effort parameter, always-on).
 - Unknown IDs are still registered, labeled `unverified metadata; estimated pricing`, text-only, with conservative 16,384 context / 4,096 output placeholders.
 - Metadata is not an allowlist; `/v1/models` alone decides which IDs exist.
+- Discovery automates membership, not specifications: River's `/v1/models` currently returns only `id`, `object`, and `owned_by`. Limits/capabilities/effort settings need verified metadata updates; prices are published separately at https://console.river.ai/api/public/pricing and are not fetched by this extension. Unknown models are not assumed to share a family's specifications.
 
 ## Offline and caching
 

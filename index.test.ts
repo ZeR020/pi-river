@@ -15,6 +15,7 @@ const { getSupportedThinkingLevels, calculateCost } = await import(pathToFileURL
 const { streamSimple } = await import(pathToFileURL(join(aiDist, "api/openai-completions.js")).href);
 const GLM = "zai-org/GLM-5.3-Flash";
 const DS = "deepseek-ai/DeepSeek-V4.1-Flash";
+const DS1017 = "deepseek-ai/DeepSeek-V4.1-Flash-1017";
 const NV = "nvidia/NVIDIA-Nemotron-3.5-Super-VL-120B-A12B-NVFP4";
 const UNKNOWN = "future/new-chat-model";
 const catalog = (ids: string[]) => ({ object: "list", data: ids.map((id) => ({ id, object: "model", owned_by: "river" })) });
@@ -78,13 +79,14 @@ test("effort mappings apply only to documented exact IDs", () => {
 });
 
 test("live membership uses documented prices and per-model output budgets", async (t) => {
-	t.mock.method(globalThis, "fetch", async () => Response.json(catalog([DS, GLM, NV, UNKNOWN])));
+	t.mock.method(globalThis, "fetch", async () => Response.json(catalog([DS, DS1017, GLM, NV, UNKNOWN])));
 	const { models } = await runtime();
 	const refreshed = await models.refresh({ providers: ["river"], allowNetwork: true });
 	assert.equal(refreshed.errors.size, 0);
-	assert.equal(models.getModels("river").length, 4);
+	assert.equal(models.getModels("river").length, 5);
 	for (const [id, outputLimit, input, output, cacheRead] of [
 		[DS, 384000, 0.12, 0.48, 0.0024], [GLM, 128000, 0.12, 0.40, 0.024], [NV, 128000, 0.07, 0.37, 0.024],
+		[DS1017, 384000, 0.12, 0.48, 0.0024],
 	] as const) {
 		const model = models.getModel("river", id)!;
 		assert.equal((await wire(model, "max")).max_tokens, outputLimit);
@@ -101,12 +103,13 @@ test("live membership uses documented prices and per-model output budgets", asyn
 });
 
 test("actual Pi reasoning choices and requests match documented controls", async (t) => {
-	t.mock.method(globalThis, "fetch", async () => Response.json(catalog([GLM, DS, NV])));
+	t.mock.method(globalThis, "fetch", async () => Response.json(catalog([GLM, DS, DS1017, NV])));
 	const { models } = await runtime();
 	await models.refresh({ providers: ["river"], allowNetwork: true });
 	for (const [id, levels, efforts] of [
 		[GLM, ["low", "high", "max"], ["low", "high", "max"]],
 		[DS, ["off", "high", "max"], ["none", "high", "max"]],
+		[DS1017, ["off", "high", "max"], ["none", "high", "max"]],
 		[NV, ["high"], [undefined]],
 	] as const) {
 		const model = models.getModel("river", id)!;
@@ -148,6 +151,21 @@ test("offline restoration upgrades the previous zero-price snapshot", async () =
 	assert.equal(model.maxTokens, 384000);
 	assert.equal(model.cost.output, 0.48);
 	assert.equal(model.reasoning, true);
+});
+
+test("offline restoration upgrades -1017 from unverified fallback metadata", async () => {
+	const config = await configuration();
+	const restored = await config.refreshModels!({ allowNetwork: false, signal: new AbortController().signal, publish: async () => true,
+		stored: { checkedAt: 0, models: [{ type: "chat", id: DS1017, name: DS1017 + " (unverified metadata; estimated pricing)", provider: "river", baseUrl: "https://api.river.ai/v1", api: "openai-completions", input: ["text"], reasoning: false, contextWindow: 16384, maxTokens: 4096, cost: { input: 0.12, output: 0.48, cacheRead: 0.024, cacheWrite: 0 } }] },
+	});
+	const model = restored[0];
+	assert.ok("maxTokens" in model);
+	assert.equal(model.contextWindow, 1048576);
+	assert.equal(model.maxTokens, 384000);
+	assert.equal(model.name, DS1017);
+	assert.deepEqual(model.input, ["text", "image"]);
+	assert.equal(model.cost.cacheRead, 0.0024);
+	assert.deepEqual(getSupportedThinkingLevels(model), ["off", "high", "max"]);
 });
 
 test("persistence errors are not converted to successful refreshes", async (t) => {
@@ -282,11 +300,12 @@ for (const entry of ["cli.js", "bundle/cli.js"]) {
 	test(`cold Pi ${entry} lists discovered River models without a pre-existing cache`, () => {
 		const dir = mkdtempSync(join(tmpdir(), "river-cli-"));
 		// Pi configures undici during CLI setup. Keep the deliberately mocked HTTP boundary across that setup.
-		const script = `const mockFetch = async (url) => { if (String(url) !== 'https://api.river.ai/v1/models') throw new Error('unexpected network'); return Response.json(${JSON.stringify(catalog([GLM, DS]))}); }; Object.defineProperty(globalThis, 'fetch', {configurable: true, get: () => mockFetch, set: () => {}}); process.argv = ['node', 'pi', '--no-extensions', '--no-skills', '--no-prompt-templates', '--no-themes', '--no-mcp', '-e', '/workspace/index.ts', '--list-models', 'river']; await import(${JSON.stringify(pathToFileURL(join(piDist, entry)).href)});`;
+		const script = `const mockFetch = async (url) => { if (String(url) !== 'https://api.river.ai/v1/models') throw new Error('unexpected network'); return Response.json(${JSON.stringify(catalog([GLM, DS, DS1017]))}); }; Object.defineProperty(globalThis, 'fetch', {configurable: true, get: () => mockFetch, set: () => {}}); process.argv = ['node', 'pi', '--no-extensions', '--no-skills', '--no-prompt-templates', '--no-themes', '--no-mcp', '-e', '/workspace/index.ts', '--list-models', 'river']; await import(${JSON.stringify(pathToFileURL(join(piDist, entry)).href)});`;
 		const child = spawnSync(process.execPath, ["--input-type=module", "-e", script], { encoding: "utf8", timeout: 20000, env: { ...process.env, PI_OFFLINE: "0", PI_CODING_AGENT_DIR: dir } });
 		assert.equal(child.status, 0, child.stderr);
 		assert.match(child.stdout, /zai-org\/GLM-5\.3-Flash/, child.stderr);
 		assert.match(child.stdout, /deepseek-ai\/DeepSeek-V4\.1-Flash/);
+		assert.match(child.stdout, /deepseek-ai\/DeepSeek-V4\.1-Flash-1017/);
 		assert.doesNotMatch(child.stderr, /fake-test-key|failed|error/i);
 	});
 }

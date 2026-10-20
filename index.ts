@@ -3,6 +3,7 @@ import { ModelRuntime, type ExtensionAPI, type ProviderConfig } from "@earendil-
 const BASE_URL = "https://api.river.ai/v1";
 const GLM = "zai-org/GLM-5.3-Flash";
 const DEEPSEEK = "deepseek-ai/DeepSeek-V4.1-Flash";
+const DEEPSEEK_1017 = "deepseek-ai/DeepSeek-V4.1-Flash-1017";
 const NEMOTRON = "nvidia/NVIDIA-Nemotron-3.5-Super-VL-120B-A12B-NVFP4";
 
 const COMPAT = {
@@ -24,6 +25,7 @@ const COMPAT = {
 // https://docs.river.ai/guides/inference-models/
 const METADATA: Record<string, { maxTokens: number; cost: { input: number; output: number; cacheRead: number; cacheWrite: number } }> = {
 	[DEEPSEEK]: { maxTokens: 384_000, cost: { input: 0.12, output: 0.48, cacheRead: 0.0024, cacheWrite: 0 } },
+	[DEEPSEEK_1017]: { maxTokens: 384_000, cost: { input: 0.12, output: 0.48, cacheRead: 0.0024, cacheWrite: 0 } },
 	// River prints 128K; use 128,000 without assuming binary units.
 	[GLM]: { maxTokens: 128_000, cost: { input: 0.12, output: 0.40, cacheRead: 0.024, cacheWrite: 0 } },
 	[NEMOTRON]: { maxTokens: 128_000, cost: { input: 0.07, output: 0.37, cacheRead: 0.024, cacheWrite: 0 } },
@@ -46,7 +48,7 @@ export function riverThinking(id: string): { effort: boolean; map?: Record<strin
 	if (id === GLM) {
 		return { effort: true, map: { off: null, minimal: null, low: "low", medium: null, high: "high", xhigh: null, max: "max" } };
 	}
-	if (id === DEEPSEEK) {
+	if (id === DEEPSEEK || id === DEEPSEEK_1017) {
 		return { effort: true, map: { off: "none", minimal: null, low: null, medium: null, high: "high", xhigh: null, max: "max" } };
 	}
 	if (id === NEMOTRON) {
