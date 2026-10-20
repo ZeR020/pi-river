@@ -1,79 +1,78 @@
 # pi-river
 
-[River.ai](https://river.ai) inference provider for [Pi](https://pi.dev). Discover account-accessible models and use Pi's normal model picker, thinking controls, streaming, tools, and usage accounting.
+Use [River.ai](https://river.ai) models in [Pi](https://pi.dev), including DeepSeek, GLM, and Nemotron. The extension adds River to Pi's model picker with model discovery, thinking controls, image input, tool calling, and token/cost tracking.
 
-The extension uses River's public inference API at `https://api.river.ai/v1` and Pi's native `openai-completions` implementation. It adds no runtime dependencies beyond the host-provided Pi SDK.
+## Quick start
 
-## Requirements
+You need **Pi 1.1.0 or newer**, Git, and a **River inference API key** from the [River console](https://console.river.ai). The extension has been tested with Pi 1.3.0.
 
-- Pi 1.1.0 or newer; verified with Pi 1.3.0.
-- A River API key with inference access.
-- Git access to this repository. If access is restricted, authenticate Git before installing.
+### 1. Install
 
-## Install
+Run this in your terminal:
 
 ```bash
 pi install git:github.com/ZeR020/pi-river
 ```
 
-Restart Pi or run `/reload` after installation. SSH is also supported:
+Then start Pi. If Pi is already running, enter `/reload` to load the extension.
 
-```bash
-pi install git:git@github.com:ZeR020/pi-river
+### 2. Connect your River account
+
+In Pi, enter:
+
+```text
+/login river
 ```
 
-Review extension code before loading it: Pi extensions run inside the agent process.
+Paste your River API key when prompted. Pi saves it for future sessions.
 
-## Authenticate and select a model
+Alternatively, set the `RIVER_API_KEY` environment variable before starting Pi. If both are configured, the saved key takes precedence.
 
-1. Run `/login river` and enter your River API key, or set `RIVER_API_KEY` before starting Pi.
-2. Open `/model` and select a model under `river`.
-3. Use `/thinking` to choose one of that model's supported settings.
+### 3. Choose a model
 
-Pi stores credentials entered through `/login`; stored credentials take precedence over the environment variable. Catalog requests require a resolved key and time out after five seconds. Inference requests send conversation content to River; use River's policies to assess data handling.
+Enter `/model`, search for `river`, and select a model. Enter `/thinking` to choose its reasoning setting. You can now use it for normal Pi conversations and coding tasks.
 
-## Model discovery and metadata
+Requests use your River account and are billed by River. Your conversation content is sent to River when you use one of its models.
 
-**Model IDs are discovered automatically; specifications are not.** The extension fetches `GET /v1/models` and registers every valid returned ID. The endpoint currently returns only `id`, `object`, and `owned_by`, not capabilities, limits, reasoning controls, or prices.
+## Models and thinking settings
 
-A built-in metadata table supplies verified specifications for these exact IDs:
+The extension has verified configuration for the following models. Context and output limits are in tokens; context includes both input and output.
 
-| Model ID | Context (input + output) | Maximum output | Thinking settings |
+| Model | Context | Maximum output | Thinking settings |
 | --- | ---: | ---: | --- |
-| `deepseek-ai/DeepSeek-V4.1-Flash` | 1,048,576 | 384,000 | Off / High / Max |
-| `deepseek-ai/DeepSeek-V4.1-Flash-1017` | 1,048,576 | 384,000 | Off / High / Max |
-| `zai-org/GLM-5.3-Flash` | 1,048,576 | 128,000 | Low / High / Max |
-| `nvidia/NVIDIA-Nemotron-3.5-Super-VL-120B-A12B-NVFP4` | 1,048,576 | 128,000 | Automatic only |
+| DeepSeek-V4.1-Flash | 1,048,576 | 384,000 | Off / High / Max |
+| DeepSeek-V4.1-Flash-1017 | 1,048,576 | 384,000 | Off / High / Max |
+| GLM-5.3-Flash | 1,048,576 | 128,000 | Low / High / Max |
+| Nemotron-3.5-Super-VL-120B-A12B-NVFP4 | 1,048,576 | 128,000 | Automatic |
 
-These models support text and image input. River documents GLM/Nemotron output as `128K`; the extension conservatively uses 128,000 tokens. Reasoning and the final answer share the output budget. DeepSeek Off sends `reasoning_effort: "none"`. Nemotron exposes one High slot in Pi, labeled automatic reasoning in the model name; it sends no effort parameter and does not offer an Off control.
+These models accept text and images. Reasoning tokens and the final answer share the output limit. River lists GLM and Nemotron output as `128K`; the extension conservatively uses 128,000.
 
-- Metadata is not an availability allowlist: `/v1/models` alone determines membership.
-- New, unverified IDs remain selectable, labeled `unverified metadata; estimated pricing`, with text-only input, no advertised thinking controls, and conservative 16,384 context / 4,096 output placeholders. These are not verified model limits.
-- Verified models use River's published per-million-token prices, including separate cached-input rates. Unknown-model prices are estimates, not verified prices or upper bounds.
-- Prices are maintained in source, not fetched automatically. River publishes current rates at its [public pricing endpoint](https://console.river.ai/api/public/pricing). Pi's cost display is an estimate, not an invoice.
-- Adding complete support for a new release requires checking the official sources and updating its exact-ID metadata. See [Contributing](CONTRIBUTING.md#model-metadata-changes).
+GLM cannot turn reasoning off. Nemotron reasons automatically: Pi shows a single **High** setting, and the model name identifies it as automatic. That setting does not change its reasoning effort.
 
-### Sources
+Specifications are based on River's [model documentation](https://docs.river.ai/guides/inference-models/) and [reasoning controls](https://docs.river.ai/guides/inference-controls/).
 
-- [Model capabilities and limits](https://docs.river.ai/guides/inference-models/)
-- [Reasoning and API controls](https://docs.river.ai/guides/inference-controls/)
-- [Current inference prices](https://console.river.ai/api/public/pricing)
+### What model discovery does
 
-## Offline use and caching
+The extension fetches the models available to your River account, so newly released models can appear without adding their IDs by hand.
 
-- `pi --offline` or `PI_OFFLINE=1` skips startup catalog networking; `true` and `yes` are also accepted environment values. This does not make remote inference available offline.
-- Validated, deduplicated catalogs are persisted through Pi's model cache. Invalid responses and failed refreshes retain cached availability while reporting errors.
-- A valid empty catalog (`data: []`) intentionally clears membership.
-- Catalog errors do not log response bodies or credentials.
+**Discovery does not automatically configure a new model's specifications.** River's model-list API returns IDs but no context limits, thinking settings, capabilities, or prices. Those details are verified and maintained in the extension separately.
 
-If a new model shows placeholder limits or no thinking controls, it was discovered without verified metadata. Updating the extension and running `/reload` loads metadata fixes; it cannot obtain missing specifications from the ID-only catalog.
+An unrecognized model is labeled **unverified metadata; estimated pricing**. It uses text-only input, no selectable thinking controls, and placeholder limits of 16,384 context / 4,096 output tokens. These are conservative defaults, not the model's actual specifications. An extension update is needed to add verified support.
 
-## Development
+## Usage and costs
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the source layout, sandbox test prerequisites, model-verification workflow, and pull-request expectations.
+Pi tracks token usage and estimates cost using the extension's model pricing, including discounted cached input. Rates are maintained in the extension; they are not fetched automatically. Check [River's current prices](https://console.river.ai/api/public/pricing) for billing rates. Prices for unverified models are estimates, not guaranteed upper bounds; Pi's display is not an invoice.
 
-## Distribution and license
+## Troubleshooting
 
-Git installation is supported. `private: true` in `package.json` prevents accidental npm publication; it does not control GitHub repository visibility or Git-based installation.
+- **No River models appear:** check your API key with `/login river`, confirm it has inference access, and reopen `/model`. Catalog requests time out after five seconds.
+- **A model has no thinking options or unexpectedly small limits:** check whether its name says `unverified metadata`. Update the extension and run `/reload`; if it is still unverified, its specifications have not been added yet.
+- **The model list cannot refresh:** cached models remain available after failed refreshes. `pi --offline` skips the startup model-list request, but River inference still needs an internet connection.
 
-An open-source license has not been selected. Documentation is written for prospective public contributors, but source availability alone does not grant an open-source license. License selection and any public release remain separate maintainer decisions.
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, tests, and how to add verified model support. The extension reuses Pi's built-in streaming and tool handling rather than maintaining a separate implementation.
+
+## License
+
+No license has been selected yet.

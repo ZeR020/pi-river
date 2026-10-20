@@ -1,6 +1,6 @@
 # Contributing
 
-Develop `pi-river` as a small, public-facing Pi provider: document behavior for users outside the maintainer's environment, keep changes focused, and distinguish verified support from assumptions. Repository visibility, licensing, and publishing are separate maintainer decisions.
+Bug reports and focused pull requests are welcome. Describe the problem you are solving, keep the change small, and include tests and documentation where behavior changes.
 
 ## Source layout
 
