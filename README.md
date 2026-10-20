@@ -1,55 +1,79 @@
 # pi-river
 
-River.ai provider for Pi. A single-file Pi extension that registers a `river` provider against `https://api.river.ai/v1` and reuses Pi's native `openai-completions` stream, so streaming, tools, usage parsing, cancellation, and request hooks stay native.
+[River.ai](https://river.ai) inference provider for [Pi](https://pi.dev). Discover account-accessible models and use Pi's normal model picker, thinking controls, streaming, tools, and usage accounting.
 
-Model discovery is live: the extension fetches `GET /v1/models` and registers every account-accessible model ID. No static model catalog ships with the package; a small built-in metadata table only attaches pricing, context, output, and reasoning details to documented model IDs.
+The extension uses River's public inference API at `https://api.river.ai/v1` and Pi's native `openai-completions` implementation. It adds no runtime dependencies beyond the host-provided Pi SDK.
 
-## Install (private repo)
+## Requirements
+
+- Pi 1.1.0 or newer; verified with Pi 1.3.0.
+- A River API key with inference access.
+- Git access to this repository. If access is restricted, authenticate Git before installing.
+
+## Install
+
+```bash
+pi install git:github.com/ZeR020/pi-river
+```
+
+Restart Pi or run `/reload` after installation. SSH is also supported:
 
 ```bash
 pi install git:git@github.com:ZeR020/pi-river
 ```
 
-This repository is private, so install requires authenticated Git/SSH access to `github.com:ZeR020/pi-river`. A repo-only read-only deploy key is the suggested setup for a VM. Authentication is a prerequisite you provide; this repo does not set it up.
+Review extension code before loading it: Pi extensions run inside the agent process.
 
-After installing, restart sessions or run `/reload` to load the extension.
+## Authenticate and select a model
 
-## Authentication
+1. Run `/login river` and enter your River API key, or set `RIVER_API_KEY` before starting Pi.
+2. Open `/model` and select a model under `river`.
+3. Use `/thinking` to choose one of that model's supported settings.
 
-Set `RIVER_API_KEY` in the environment, or run `/login river` and enter your `rv_...` key (stored by Pi). Stored credentials take precedence over the environment. Catalog requests need a resolved key and time out after 5 seconds.
+Pi stores credentials entered through `/login`; stored credentials take precedence over the environment variable. Catalog requests require a resolved key and time out after five seconds. Inference requests send conversation content to River; use River's policies to assess data handling.
 
-## Models
+## Model discovery and metadata
 
-Model selection uses Pi's normal model picker under the `river` provider.
+**Model IDs are discovered automatically; specifications are not.** The extension fetches `GET /v1/models` and registers every valid returned ID. The endpoint currently returns only `id`, `object`, and `owned_by`, not capabilities, limits, reasoning controls, or prices.
 
-- Documented IDs (for example `deepseek-ai/DeepSeek-V4.1-Flash`, `deepseek-ai/DeepSeek-V4.1-Flash-1017`, `zai-org/GLM-5.3-Flash`, `nvidia/NVIDIA-Nemotron-3.5-Super-VL-120B-A12B-NVFP4`) get River's documented pricing and context: 1,048,576 context; 384,000 output for DeepSeek, 128,000 for GLM and Nemotron. Reasoning controls: GLM Low/High/Max, DeepSeek Off/High/Max (Off sent as `none`), Nemotron automatic only (no effort parameter, always-on).
-- Unknown IDs are still registered, labeled `unverified metadata; estimated pricing`, text-only, with conservative 16,384 context / 4,096 output placeholders.
-- Metadata is not an allowlist; `/v1/models` alone decides which IDs exist.
-- Discovery automates membership, not specifications: River's `/v1/models` currently returns only `id`, `object`, and `owned_by`. Limits/capabilities/effort settings need verified metadata updates; prices are published separately at https://console.river.ai/api/public/pricing and are not fetched by this extension. Unknown models are not assumed to share a family's specifications.
+A built-in metadata table supplies verified specifications for these exact IDs:
 
-## Offline and caching
+| Model ID | Context (input + output) | Maximum output | Thinking settings |
+| --- | ---: | ---: | --- |
+| `deepseek-ai/DeepSeek-V4.1-Flash` | 1,048,576 | 384,000 | Off / High / Max |
+| `deepseek-ai/DeepSeek-V4.1-Flash-1017` | 1,048,576 | 384,000 | Off / High / Max |
+| `zai-org/GLM-5.3-Flash` | 1,048,576 | 128,000 | Low / High / Max |
+| `nvidia/NVIDIA-Nemotron-3.5-Super-VL-120B-A12B-NVFP4` | 1,048,576 | 128,000 | Automatic only |
 
-- `PI_OFFLINE=1` (also `true`/`yes`) skips the startup catalog fetch; Pi sets this for `pi --offline`.
-- Validated, deduplicated catalogs are cached through Pi's model persistence. A failed network call, HTTP error, or invalid response rejects the refresh and keeps the cached catalog; a valid empty catalog (`data: []`) intentionally empties the cache.
-- Cached models stay usable while refreshes fail. Response bodies and credentials are never logged.
+These models support text and image input. River documents GLM/Nemotron output as `128K`; the extension conservatively uses 128,000 tokens. Reasoning and the final answer share the output budget. DeepSeek Off sends `reasoning_effort: "none"`. Nemotron exposes one High slot in Pi, labeled automatic reasoning in the model name; it sends no effort parameter and does not offer an Off control.
 
-## Requirements
+- Metadata is not an availability allowlist: `/v1/models` alone determines membership.
+- New, unverified IDs remain selectable, labeled `unverified metadata; estimated pricing`, with text-only input, no advertised thinking controls, and conservative 16,384 context / 4,096 output placeholders. These are not verified model limits.
+- Verified models use River's published per-million-token prices, including separate cached-input rates. Unknown-model prices are estimates, not verified prices or upper bounds.
+- Prices are maintained in source, not fetched automatically. River publishes current rates at its [public pricing endpoint](https://console.river.ai/api/public/pricing). Pi's cost display is an estimate, not an invoice.
+- Adding complete support for a new release requires checking the official sources and updating its exact-ID metadata. See [Contributing](CONTRIBUTING.md#model-metadata-changes).
 
-- Pi 1.1.0 or newer. Tested against the installed host (check with `pi --version`; currently 1.3.0).
-- No npm dependencies. The Pi SDK is a peer dependency supplied by the host.
+### Sources
 
-## Testing
+- [Model capabilities and limits](https://docs.river.ai/guides/inference-models/)
+- [Reasoning and API controls](https://docs.river.ai/guides/inference-controls/)
+- [Current inference prices](https://console.river.ai/api/public/pricing)
 
-```bash
-bash test.sh
-```
+## Offline use and caching
 
-Runs strict TypeScript checking followed by the full `node:test` suite inside a Bubblewrap sandbox. Requires existing tooling; it installs nothing:
+- `pi --offline` or `PI_OFFLINE=1` skips startup catalog networking; `true` and `yes` are also accepted environment values. This does not make remote inference available offline.
+- Validated, deduplicated catalogs are persisted through Pi's model cache. Invalid responses and failed refreshes retain cached availability while reporting errors.
+- A valid empty catalog (`data: []`) intentionally clears membership.
+- Catalog errors do not log response bodies or credentials.
 
-- Node 24 and an installed Pi binary (source and installed packages mount read-only)
-- Bubblewrap (`bwrap`)
-- A TypeScript compiler at `~/.pi-lens/tools/node_modules/typescript`, or set `PI_RIVER_TYPESCRIPT_DIR` to an existing compiler
+If a new model shows placeholder limits or no thinking controls, it was discovered without verified metadata. Updating the extension and running `/reload` loads metadata fixes; it cannot obtain missing specifications from the ID-only catalog.
 
-All credentials and HTTP responses in tests are fake. The strict check resolves SDK types from the installed Pi inside the active Node prefix; update the hardcoded Node v24 path in `tsconfig.json` if your runtime moves.
+## Development
 
-The package is marked `private: true` and is not published to npm.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the source layout, sandbox test prerequisites, model-verification workflow, and pull-request expectations.
+
+## Distribution and license
+
+Git installation is supported. `private: true` in `package.json` prevents accidental npm publication; it does not control GitHub repository visibility or Git-based installation.
+
+An open-source license has not been selected. Documentation is written for prospective public contributors, but source availability alone does not grant an open-source license. License selection and any public release remain separate maintainer decisions.
