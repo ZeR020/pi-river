@@ -1,10 +1,10 @@
 # pi-river
 
-Use [River.ai](https://river.ai) models in [Pi](https://pi.dev), including DeepSeek, GLM, and Nemotron. The extension adds River to Pi's model picker with model discovery, thinking controls, image input, tool calling, and token/cost tracking.
+Use [River.ai](https://river.ai) models in [Pi](https://pi.dev), including DeepSeek, GLM, Nemotron, Qwen, and Kimi. The extension adds River to Pi's model picker with model discovery, thinking controls, image input, tool calling, and token/cost tracking.
 
 ## Quick start
 
-You need **Pi 1.1.0 or newer**, Git, and a **River inference API key** from the [River console](https://console.river.ai). The extension has been tested with Pi 1.3.0.
+You need **Pi 1.1.0 or newer**, Git, and a **River inference API key** from the [River console](https://console.river.ai). The extension has been tested with Pi 1.4.0.
 
 ### 1. Install
 
@@ -44,12 +44,23 @@ The extension has verified configuration for the following models. Context and o
 | DeepSeek-V4.1-Flash-1017 | 1,048,576 | 384,000 | Off / High / Max |
 | GLM-5.3-Flash | 1,048,576 | 128,000 | Low / High / Max |
 | Nemotron-3.5-Super-VL-120B-A12B-NVFP4 | 1,048,576 | 128,000 | Automatic |
+| Qwen3.8-27B-FP8 | 262,144 | 262,143 | Automatic |
 
 These models accept text and images. Reasoning tokens and the final answer share the output limit. River lists GLM and Nemotron output as `128K`; the extension conservatively uses 128,000.
+Pi may send a smaller output budget to leave room for your input and its context safety margin.
 
-GLM cannot turn reasoning off. Nemotron reasons automatically: Pi shows a single **High** setting, and the model name identifies it as automatic. That setting does not change its reasoning effort.
+GLM cannot turn reasoning off. Nemotron and Qwen have no documented effort controls: Pi shows a single **High** setting, and their model names identify reasoning as automatic. That setting sends no effort parameter.
 
 Specifications are based on River's [model documentation](https://docs.river.ai/guides/inference-models/) and [reasoning controls](https://docs.river.ai/guides/inference-controls/).
+
+**Kimi-K3 has verified pricing and live-checked text streaming with automatic reasoning.** River has not yet published its limits or image/tool capabilities. It is labeled **unverified capabilities and limits**, with text-only input and placeholder limits of 16,384 context / 4,096 output tokens. These are not Kimi's actual limits. Pi shows a single **High** setting for automatic reasoning and sends no effort parameter; no effort controls have been verified.
+
+Rates for the new models (USD per million tokens):
+
+| Model | Input | Cached input | Output |
+| --- | ---: | ---: | ---: |
+| Qwen3.8-27B-FP8 | $0.10 | $0.02 | $2.00 |
+| Kimi-K3 | $3.00 | $0.30 | $15.00 |
 
 ### What model discovery does
 
@@ -61,12 +72,12 @@ An unrecognized model is labeled **unverified metadata; estimated pricing**. It 
 
 ## Usage and costs
 
-Pi tracks token usage and estimates cost using the extension's model pricing, including discounted cached input. Rates are maintained in the extension; they are not fetched automatically. Check [River's current prices](https://console.river.ai/api/public/pricing) for billing rates. Prices for unverified models are estimates, not guaranteed upper bounds; Pi's display is not an invoice.
+Pi tracks token usage and estimates cost using the extension's model pricing, including discounted cached input. Rates are maintained in the extension; they are not fetched automatically. Check [River's current prices](https://console.river.ai/api/public/pricing) for billing rates. Prices labeled estimated are placeholders, not guaranteed upper bounds; Pi's display is not an invoice.
 
 ## Troubleshooting
 
 - **No River models appear:** check your API key with `/login river`, confirm it has inference access, and reopen `/model`. Catalog requests time out after five seconds.
-- **A model has no thinking options or unexpectedly small limits:** check whether its name says `unverified metadata`. Update the extension and run `/reload`; if it is still unverified, its specifications have not been added yet.
+- **A model has no thinking options or unexpectedly small limits:** check whether its name says `unverified`. Update the extension and run `/reload`; if it is still unverified, its specifications have not been added yet.
 - **The model list cannot refresh:** cached models remain available after failed refreshes. `pi --offline` skips the startup model-list request, but River inference still needs an internet connection.
 
 ## Contributing

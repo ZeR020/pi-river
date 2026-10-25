@@ -17,6 +17,8 @@ const GLM = "zai-org/GLM-5.3-Flash";
 const DS = "deepseek-ai/DeepSeek-V4.1-Flash";
 const DS1017 = "deepseek-ai/DeepSeek-V4.1-Flash-1017";
 const NV = "nvidia/NVIDIA-Nemotron-3.5-Super-VL-120B-A12B-NVFP4";
+const QWEN = "Qwen/Qwen3.8-27B-FP8";
+const KIMI = "moonshotai/Kimi-K3";
 const UNKNOWN = "future/new-chat-model";
 const catalog = (ids: string[]) => ({ object: "list", data: ids.map((id) => ({ id, object: "model", owned_by: "river" })) });
 
@@ -76,25 +78,38 @@ test("effort mappings apply only to documented exact IDs", () => {
 	assert.equal(riverThinking(DS).map?.max, "max");
 	assert.equal(riverThinking("future/glm-unverified").effort, false);
 	assert.equal(riverThinking("future/deepseek-unverified").effort, false);
+	assert.equal(riverThinking("Qwen/Qwen3.8-unverified").effort, false);
+	assert.equal(riverThinking("moonshotai/Kimi-unverified").effort, false);
 });
 
 test("live membership uses documented prices and per-model output budgets", async (t) => {
-	t.mock.method(globalThis, "fetch", async () => Response.json(catalog([DS, DS1017, GLM, NV, UNKNOWN])));
+	t.mock.method(globalThis, "fetch", async () => Response.json(catalog([DS, DS1017, GLM, NV, QWEN, KIMI, UNKNOWN])));
 	const { models } = await runtime();
 	const refreshed = await models.refresh({ providers: ["river"], allowNetwork: true });
 	assert.equal(refreshed.errors.size, 0);
-	assert.equal(models.getModels("river").length, 5);
-	for (const [id, outputLimit, input, output, cacheRead] of [
-		[DS, 384000, 0.12, 0.48, 0.0024], [GLM, 128000, 0.12, 0.40, 0.024], [NV, 128000, 0.07, 0.37, 0.024],
-		[DS1017, 384000, 0.12, 0.48, 0.0024],
+	assert.equal(models.getModels("river").length, 7);
+	for (const [id, contextLimit, outputLimit, input, output, cacheRead] of [
+		[DS, 1048576, 384000, 0.12, 0.48, 0.0024], [GLM, 1048576, 128000, 0.12, 0.40, 0.024], [NV, 1048576, 128000, 0.07, 0.37, 0.024],
+		[DS1017, 1048576, 384000, 0.12, 0.48, 0.0024],
+		[QWEN, 262144, 262143, 0.10, 2.00, 0.02], [KIMI, 16384, 4096, 3.00, 15.00, 0.30],
 	] as const) {
 		const model = models.getModel("river", id)!;
-		assert.equal((await wire(model, "max")).max_tokens, outputLimit);
+		assert.equal(model.maxTokens, outputLimit);
+		const budget = (await wire(model, "max")).max_tokens;
+		// Pi reserves context headroom when the output ceiling nearly fills the window.
+		if (id === QWEN) assert.ok(budget > 250000 && budget <= outputLimit);
+		else assert.equal(budget, outputLimit);
 		assert.deepEqual(model.cost, { input, output, cacheRead, cacheWrite: 0 });
 		const usage = { input: 1000000, output: 1000000, cacheRead: 1000000, cacheWrite: 0, cost: {} };
 		assert.ok(Math.abs(calculateCost(model, usage).total - (input + output + cacheRead)) < 1e-10);
-		assert.equal(model.contextWindow, 1048576);
+		assert.equal(model.contextWindow, contextLimit);
 	}
+	assert.deepEqual(models.getModel("river", QWEN)!.input, ["text", "image"]);
+	const kimi = models.getModel("river", KIMI)!;
+	assert.match(kimi.name, /unverified capabilities and limits/i);
+	assert.doesNotMatch(kimi.name, /estimated pricing/i);
+	assert.deepEqual(kimi.input, ["text"]);
+	assert.equal(kimi.reasoning, true);
 	const unknown = models.getModel("river", UNKNOWN)!;
 	assert.match(unknown.name, /unverified|estimated/i);
 	assert.ok(unknown.cost.input > 0 && unknown.cost.output > 0);
@@ -103,7 +118,7 @@ test("live membership uses documented prices and per-model output budgets", asyn
 });
 
 test("actual Pi reasoning choices and requests match documented controls", async (t) => {
-	t.mock.method(globalThis, "fetch", async () => Response.json(catalog([GLM, DS, DS1017, NV])));
+	t.mock.method(globalThis, "fetch", async () => Response.json(catalog([GLM, DS, DS1017, NV, QWEN, KIMI])));
 	const { models } = await runtime();
 	await models.refresh({ providers: ["river"], allowNetwork: true });
 	for (const [id, levels, efforts] of [
@@ -111,12 +126,16 @@ test("actual Pi reasoning choices and requests match documented controls", async
 		[DS, ["off", "high", "max"], ["none", "high", "max"]],
 		[DS1017, ["off", "high", "max"], ["none", "high", "max"]],
 		[NV, ["high"], [undefined]],
+		[QWEN, ["high"], [undefined]],
+		[KIMI, ["high"], [undefined]],
 	] as const) {
 		const model = models.getModel("river", id)!;
 		assert.deepEqual(getSupportedThinkingLevels(model), levels);
 		for (let i = 0; i < levels.length; i++) assert.equal((await wire(model, levels[i])).reasoning_effort, efforts[i]);
 	}
 	assert.match(models.getModel("river", NV)!.name, /automatic/i);
+	assert.match(models.getModel("river", QWEN)!.name, /automatic/i);
+	assert.match(models.getModel("river", KIMI)!.name, /automatic/i);
 });
 
 test("refresh failures remain visible without losing the last good live or saved catalog", async (t) => {
@@ -166,6 +185,26 @@ test("offline restoration upgrades -1017 from unverified fallback metadata", asy
 	assert.deepEqual(model.input, ["text", "image"]);
 	assert.equal(model.cost.cacheRead, 0.0024);
 	assert.deepEqual(getSupportedThinkingLevels(model), ["off", "high", "max"]);
+});
+
+test("offline restoration upgrades new models without inventing Kimi capabilities", async () => {
+	const config = await configuration();
+	const restored = await config.refreshModels!({ allowNetwork: false, signal: new AbortController().signal, publish: async () => true,
+		stored: { checkedAt: 0, models: [QWEN, KIMI].map((id) => ({ type: "chat" as const, id, name: id, provider: "river", baseUrl: "https://api.river.ai/v1", api: "openai-completions" as const, input: ["text" as const], reasoning: false, contextWindow: 16384, maxTokens: 4096, cost: { input: 0.12, output: 0.48, cacheRead: 0.024, cacheWrite: 0 } })) },
+	});
+	const [qwen, kimi] = restored;
+	assert.ok("maxTokens" in qwen && "maxTokens" in kimi);
+	assert.equal(qwen.contextWindow, 262144);
+	assert.equal(qwen.maxTokens, 262143);
+	assert.deepEqual(qwen.input, ["text", "image"]);
+	assert.deepEqual(getSupportedThinkingLevels(qwen), ["high"]);
+	assert.equal(qwen.cost.output, 2.00);
+	assert.equal(kimi.contextWindow, 16384);
+	assert.equal(kimi.maxTokens, 4096);
+	assert.deepEqual(kimi.input, ["text"]);
+	assert.deepEqual(getSupportedThinkingLevels(kimi), ["high"]);
+	assert.equal(kimi.cost.output, 15.00);
+	assert.match(kimi.name, /unverified capabilities and limits/i);
 });
 
 test("persistence errors are not converted to successful refreshes", async (t) => {
@@ -300,12 +339,14 @@ for (const entry of ["cli.js", "bundle/cli.js"]) {
 	test(`cold Pi ${entry} lists discovered River models without a pre-existing cache`, () => {
 		const dir = mkdtempSync(join(tmpdir(), "river-cli-"));
 		// Pi configures undici during CLI setup. Keep the deliberately mocked HTTP boundary across that setup.
-		const script = `const mockFetch = async (url) => { if (String(url) !== 'https://api.river.ai/v1/models') throw new Error('unexpected network'); return Response.json(${JSON.stringify(catalog([GLM, DS, DS1017]))}); }; Object.defineProperty(globalThis, 'fetch', {configurable: true, get: () => mockFetch, set: () => {}}); process.argv = ['node', 'pi', '--no-extensions', '--no-skills', '--no-prompt-templates', '--no-themes', '--no-mcp', '-e', '/workspace/index.ts', '--list-models', 'river']; await import(${JSON.stringify(pathToFileURL(join(piDist, entry)).href)});`;
+		const script = `const mockFetch = async (url) => { if (String(url) !== 'https://api.river.ai/v1/models') throw new Error('unexpected network'); return Response.json(${JSON.stringify(catalog([GLM, DS, DS1017, QWEN, KIMI]))}); }; Object.defineProperty(globalThis, 'fetch', {configurable: true, get: () => mockFetch, set: () => {}}); process.argv = ['node', 'pi', '--no-extensions', '--no-skills', '--no-prompt-templates', '--no-themes', '--no-mcp', '-e', '/workspace/index.ts', '--list-models', 'river']; await import(${JSON.stringify(pathToFileURL(join(piDist, entry)).href)});`;
 		const child = spawnSync(process.execPath, ["--input-type=module", "-e", script], { encoding: "utf8", timeout: 20000, env: { ...process.env, PI_OFFLINE: "0", PI_CODING_AGENT_DIR: dir } });
 		assert.equal(child.status, 0, child.stderr);
 		assert.match(child.stdout, /zai-org\/GLM-5\.3-Flash/, child.stderr);
 		assert.match(child.stdout, /deepseek-ai\/DeepSeek-V4\.1-Flash/);
 		assert.match(child.stdout, /deepseek-ai\/DeepSeek-V4\.1-Flash-1017/);
+		assert.match(child.stdout, /Qwen\/Qwen3\.8-27B-FP8/);
+		assert.match(child.stdout, /moonshotai\/Kimi-K3/);
 		assert.doesNotMatch(child.stderr, /fake-test-key|failed|error/i);
 	});
 }

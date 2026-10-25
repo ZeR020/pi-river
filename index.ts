@@ -5,6 +5,8 @@ const GLM = "zai-org/GLM-5.3-Flash";
 const DEEPSEEK = "deepseek-ai/DeepSeek-V4.1-Flash";
 const DEEPSEEK_1017 = "deepseek-ai/DeepSeek-V4.1-Flash-1017";
 const NEMOTRON = "nvidia/NVIDIA-Nemotron-3.5-Super-VL-120B-A12B-NVFP4";
+const QWEN = "Qwen/Qwen3.8-27B-FP8";
+const KIMI = "moonshotai/Kimi-K3";
 
 const COMPAT = {
 	supportsStore: false,
@@ -23,12 +25,23 @@ const COMPAT = {
 
 // Metadata, not catalog membership: only /models decides which IDs exist.
 // https://docs.river.ai/guides/inference-models/
-const METADATA: Record<string, { maxTokens: number; cost: { input: number; output: number; cacheRead: number; cacheWrite: number } }> = {
-	[DEEPSEEK]: { maxTokens: 384_000, cost: { input: 0.12, output: 0.48, cacheRead: 0.0024, cacheWrite: 0 } },
-	[DEEPSEEK_1017]: { maxTokens: 384_000, cost: { input: 0.12, output: 0.48, cacheRead: 0.0024, cacheWrite: 0 } },
+const METADATA: Record<string, { contextWindow: number; maxTokens: number }> = {
+	[DEEPSEEK]: { contextWindow: 1_048_576, maxTokens: 384_000 },
+	[DEEPSEEK_1017]: { contextWindow: 1_048_576, maxTokens: 384_000 },
 	// River prints 128K; use 128,000 without assuming binary units.
-	[GLM]: { maxTokens: 128_000, cost: { input: 0.12, output: 0.40, cacheRead: 0.024, cacheWrite: 0 } },
-	[NEMOTRON]: { maxTokens: 128_000, cost: { input: 0.07, output: 0.37, cacheRead: 0.024, cacheWrite: 0 } },
+	[GLM]: { contextWindow: 1_048_576, maxTokens: 128_000 },
+	[NEMOTRON]: { contextWindow: 1_048_576, maxTokens: 128_000 },
+	[QWEN]: { contextWindow: 262_144, maxTokens: 262_143 },
+};
+// Pricing can be verified before capabilities: Kimi-K3 has no published River limits yet.
+// https://console.river.ai/api/public/pricing (inference, not training_and_sampling)
+const PRICING: Record<string, { input: number; output: number; cacheRead: number; cacheWrite: number }> = {
+	[DEEPSEEK]: { input: 0.12, output: 0.48, cacheRead: 0.0024, cacheWrite: 0 },
+	[DEEPSEEK_1017]: { input: 0.12, output: 0.48, cacheRead: 0.0024, cacheWrite: 0 },
+	[GLM]: { input: 0.12, output: 0.40, cacheRead: 0.024, cacheWrite: 0 },
+	[NEMOTRON]: { input: 0.07, output: 0.37, cacheRead: 0.024, cacheWrite: 0 },
+	[QWEN]: { input: 0.10, output: 2.00, cacheRead: 0.02, cacheWrite: 0 },
+	[KIMI]: { input: 3.00, output: 15.00, cacheRead: 0.30, cacheWrite: 0 },
 };
 
 export function riverModelIds(body: unknown): string[] {
@@ -51,7 +64,8 @@ export function riverThinking(id: string): { effort: boolean; map?: Record<strin
 	if (id === DEEPSEEK || id === DEEPSEEK_1017) {
 		return { effort: true, map: { off: "none", minimal: null, low: null, medium: null, high: "high", xhigh: null, max: "max" } };
 	}
-	if (id === NEMOTRON) {
+	// Kimi's default reasoning was live-verified; River publishes no effort controls for these models.
+	if (id === NEMOTRON || id === QWEN || id === KIMI) {
 		// Pi has no "automatic" label: keep one enabled slot, never a fake Off control.
 		return { effort: false, map: { off: null, minimal: null, low: null, medium: null, high: "auto", xhigh: null, max: null } };
 	}
@@ -60,19 +74,20 @@ export function riverThinking(id: string): { effort: boolean; map?: Record<strin
 
 function modelConfig(id: string) {
 	const metadata = Object.hasOwn(METADATA, id) ? METADATA[id] : undefined;
+	const pricing = Object.hasOwn(PRICING, id) ? PRICING[id] : undefined;
 	const thinking = riverThinking(id);
 	let name = id;
-	if (!metadata) name += " (unverified metadata; estimated pricing)";
-	else if (id === NEMOTRON) name += " (automatic reasoning)";
+	if (!metadata) name += pricing ? " (unverified capabilities and limits)" : " (unverified metadata; estimated pricing)";
+	if (thinking.map && !thinking.effort) name += " (automatic reasoning)";
 	return {
 		id,
 		name,
 		api: "openai-completions" as const,
-		reasoning: Boolean(metadata),
+		reasoning: Boolean(thinking.map),
 		input: (metadata ? ["text", "image"] : ["text"]) as ("text" | "image")[],
 		// Pi requires numeric rates: unknown IDs use explicitly labeled placeholders, not a claim of free inference.
-		cost: metadata?.cost ?? { input: 0.12, output: 0.48, cacheRead: 0.024, cacheWrite: 0 },
-		contextWindow: metadata ? 1_048_576 : 16_384,
+		cost: pricing ?? { input: 0.12, output: 0.48, cacheRead: 0.024, cacheWrite: 0 },
+		contextWindow: metadata?.contextWindow ?? 16_384,
 		maxTokens: metadata?.maxTokens ?? 4_096,
 		thinkingLevelMap: thinking.map,
 		compat: { ...COMPAT, supportsReasoningEffort: thinking.effort },

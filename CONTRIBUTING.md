@@ -43,6 +43,8 @@ Use a separate test session and avoid loading another copy of this provider in t
 5. Test cached fallback upgrades as well as fresh discovery. Run the complete offline suite, not only the new case.
 6. If server acceptance is unclear, obtain explicit approval before using credentials or making billed smoke-test requests. Keep requests small and bounded. Report what was actually verified: a tiny successful request does not validate full context capacity or every tool/image variant.
 
+Prices may be verified before capabilities or limits. Keep pricing-only models explicitly labeled unverified for capabilities/limits and retain their conservative defaults; do not mark their prices estimated. Documented or explicitly live-verified default reasoning without verified effort values uses the single automatic setting and sends no effort parameter.
+
 Reasoning tokens share the output budget and count as output usage. Prices are USD per million tokens; cached input is charged at its own rate instead of the ordinary input rate. Do not represent unknown prices as free or as guaranteed upper bounds.
 
 ## Change and pull-request checklist
