@@ -91,7 +91,7 @@ test("live membership uses documented prices and per-model output budgets", asyn
 	for (const [id, contextLimit, outputLimit, input, output, cacheRead] of [
 		[DS, 1048576, 384000, 0.12, 0.48, 0.0024], [GLM, 1048576, 128000, 0.12, 0.40, 0.024], [NV, 1048576, 128000, 0.07, 0.37, 0.024],
 		[DS1017, 1048576, 384000, 0.12, 0.48, 0.0024],
-		[QWEN, 262144, 262143, 0.10, 2.00, 0.02], [KIMI, 16384, 4096, 3.00, 15.00, 0.30],
+		[QWEN, 262144, 262143, 0.10, 2.00, 0.02], [KIMI, 1048576, 32768, 3.00, 15.00, 0.30],
 	] as const) {
 		const model = models.getModel("river", id)!;
 		assert.equal(model.maxTokens, outputLimit);
@@ -106,9 +106,9 @@ test("live membership uses documented prices and per-model output budgets", asyn
 	}
 	assert.deepEqual(models.getModel("river", QWEN)!.input, ["text", "image"]);
 	const kimi = models.getModel("river", KIMI)!;
-	assert.match(kimi.name, /unverified capabilities and limits/i);
+	assert.doesNotMatch(kimi.name, /unverified/i);
 	assert.doesNotMatch(kimi.name, /estimated pricing/i);
-	assert.deepEqual(kimi.input, ["text"]);
+	assert.deepEqual(kimi.input, ["text", "image"]);
 	assert.equal(kimi.reasoning, true);
 	const unknown = models.getModel("river", UNKNOWN)!;
 	assert.match(unknown.name, /unverified|estimated/i);
@@ -187,7 +187,7 @@ test("offline restoration upgrades -1017 from unverified fallback metadata", asy
 	assert.deepEqual(getSupportedThinkingLevels(model), ["off", "high", "max"]);
 });
 
-test("offline restoration upgrades new models without inventing Kimi capabilities", async () => {
+test("offline restoration upgrades new models to their documented capabilities and limits", async () => {
 	const config = await configuration();
 	const restored = await config.refreshModels!({ allowNetwork: false, signal: new AbortController().signal, publish: async () => true,
 		stored: { checkedAt: 0, models: [QWEN, KIMI].map((id) => ({ type: "chat" as const, id, name: id, provider: "river", baseUrl: "https://api.river.ai/v1", api: "openai-completions" as const, input: ["text" as const], reasoning: false, contextWindow: 16384, maxTokens: 4096, cost: { input: 0.12, output: 0.48, cacheRead: 0.024, cacheWrite: 0 } })) },
@@ -199,12 +199,12 @@ test("offline restoration upgrades new models without inventing Kimi capabilitie
 	assert.deepEqual(qwen.input, ["text", "image"]);
 	assert.deepEqual(getSupportedThinkingLevels(qwen), ["high"]);
 	assert.equal(qwen.cost.output, 2.00);
-	assert.equal(kimi.contextWindow, 16384);
-	assert.equal(kimi.maxTokens, 4096);
-	assert.deepEqual(kimi.input, ["text"]);
+	assert.equal(kimi.contextWindow, 1048576);
+	assert.equal(kimi.maxTokens, 32768);
+	assert.deepEqual(kimi.input, ["text", "image"]);
 	assert.deepEqual(getSupportedThinkingLevels(kimi), ["high"]);
 	assert.equal(kimi.cost.output, 15.00);
-	assert.match(kimi.name, /unverified capabilities and limits/i);
+	assert.doesNotMatch(kimi.name, /unverified/i);
 });
 
 test("persistence errors are not converted to successful refreshes", async (t) => {
@@ -295,15 +295,15 @@ test("rejected publications do not install or consume a bootstrap catalog", asyn
 });
 
 
-test("native requests preserve streaming, tools, JSON schema, and tool-result reasoning replay", async (t) => {
-	t.mock.method(globalThis, "fetch", async () => Response.json(catalog([GLM])));
+for (const id of [GLM, KIMI]) test(`native ${id} requests preserve images, tools, JSON schema, and reasoning replay`, async (t) => {
+	t.mock.method(globalThis, "fetch", async () => Response.json(catalog([id])));
 	const { models } = await runtime();
 	await models.refresh({ providers: ["river"], allowNetwork: true });
-	const model = models.getModel("river", GLM)!;
+	const model = models.getModel("river", id)!;
 	const schema = { type: "json_schema", json_schema: { name: "result", strict: true, schema: { type: "object", properties: { ok: { type: "boolean" } }, required: ["ok"], additionalProperties: false } } };
 	assert.deepEqual((await wire(model, "max", { response_format: schema, top_p: 0.9, stop: ["END"] })).response_format, schema);
 	const tool = { name: "lookup", description: "test", parameters: { type: "object", properties: { q: { type: "string" } }, required: ["q"] } };
-	const history: any = { messages: [{ role: "system", content: "test", toolsAdded: [tool], timestamp: 0 }, { role: "user", content: "Hello", timestamp: 0 }] };
+	const history: any = { messages: [{ role: "system", content: "test", toolsAdded: [tool], timestamp: 0 }, { role: "user", content: [{ type: "text", text: "Hello" }, { type: "image", data: "iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAAKElEQVR4nO3NsQ0AAAzCMP5/un0CNkuZ41wybXsHAAAAAAAAAAAAxR4yw/wuPL6QkAAAAABJRU5ErkJggg==", mimeType: "image/png" }], timestamp: 0 }] };
 	let payload: any;
 	const options = { apiKey: "fake-test-key", reasoning: "max", maxRetries: 0, fetch: async (_url: unknown, init: any) => {
 		payload = JSON.parse(init.body);
@@ -317,6 +317,7 @@ test("native requests preserve streaming, tools, JSON schema, and tool-result re
 	assert.equal(result.usage.reasoning, 10);
 	assert.ok(result.usage.cost.total > 0);
 	assert.equal(payload.stream, true);
+	assert.ok(payload.messages.find((m: any) => m.role === "user").content.some((part: any) => part.type === "image_url" && part.image_url.url.startsWith("data:image/png;base64,")));
 	assert.equal(payload.tools[0].function.name, "lookup");
 	assert.equal(payload.tools[0].function.strict, undefined);
 	assert.equal(payload.store, undefined);

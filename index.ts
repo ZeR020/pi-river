@@ -32,8 +32,8 @@ const METADATA: Record<string, { contextWindow: number; maxTokens: number }> = {
 	[GLM]: { contextWindow: 1_048_576, maxTokens: 128_000 },
 	[NEMOTRON]: { contextWindow: 1_048_576, maxTokens: 128_000 },
 	[QWEN]: { contextWindow: 262_144, maxTokens: 262_143 },
+	[KIMI]: { contextWindow: 1_048_576, maxTokens: 32_768 },
 };
-// Pricing can be verified before capabilities: Kimi-K3 has no published River limits yet.
 // https://console.river.ai/api/public/pricing (inference, not training_and_sampling)
 const PRICING: Record<string, { input: number; output: number; cacheRead: number; cacheWrite: number }> = {
 	[DEEPSEEK]: { input: 0.12, output: 0.48, cacheRead: 0.0024, cacheWrite: 0 },
