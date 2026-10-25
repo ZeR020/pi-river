@@ -127,7 +127,7 @@ test("actual Pi reasoning choices and requests match documented controls", async
 		[DS1017, ["off", "high", "max"], ["none", "high", "max"]],
 		[NV, ["high"], [undefined]],
 		[QWEN, ["high"], [undefined]],
-		[KIMI, ["high"], [undefined]],
+		[KIMI, ["low", "high", "max"], ["low", "high", "max"]],
 	] as const) {
 		const model = models.getModel("river", id)!;
 		assert.deepEqual(getSupportedThinkingLevels(model), levels);
@@ -135,7 +135,7 @@ test("actual Pi reasoning choices and requests match documented controls", async
 	}
 	assert.match(models.getModel("river", NV)!.name, /automatic/i);
 	assert.match(models.getModel("river", QWEN)!.name, /automatic/i);
-	assert.match(models.getModel("river", KIMI)!.name, /automatic/i);
+	assert.equal(models.getModel("river", KIMI)!.name, KIMI);
 });
 
 test("refresh failures remain visible without losing the last good live or saved catalog", async (t) => {
@@ -202,9 +202,10 @@ test("offline restoration upgrades new models to their documented capabilities a
 	assert.equal(kimi.contextWindow, 1048576);
 	assert.equal(kimi.maxTokens, 32768);
 	assert.deepEqual(kimi.input, ["text", "image"]);
-	assert.deepEqual(getSupportedThinkingLevels(kimi), ["high"]);
+	assert.deepEqual(getSupportedThinkingLevels(kimi), ["low", "high", "max"]);
 	assert.equal(kimi.cost.output, 15.00);
 	assert.doesNotMatch(kimi.name, /unverified/i);
+	assert.equal(kimi.name, KIMI);
 });
 
 test("persistence errors are not converted to successful refreshes", async (t) => {

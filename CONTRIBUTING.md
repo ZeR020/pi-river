@@ -37,7 +37,7 @@ Use a separate test session and avoid loading another copy of this provider in t
 ## Model metadata changes
 
 1. Confirm the exact model ID in River's authenticated `/v1/models` catalog. Membership is dynamic; do not introduce a static availability list.
-2. Check River's [model specifications](https://docs.river.ai/guides/inference-models/), [reasoning controls](https://docs.river.ai/guides/inference-controls/), and [inference prices](https://console.river.ai/api/public/pricing). Include source links in the change description. Never infer capabilities from a model-family substring or silently copy another provider's deployment limits.
+2. Check River's [model specifications](https://docs.river.ai/guides/inference-models/), [reasoning controls](https://docs.river.ai/guides/inference-controls/), and [inference prices](https://console.river.ai/api/public/pricing). If River's overview omits model-intrinsic controls, consult the exact model's official author guide/card; River's deployment limits and prices remain authoritative. Include source links in the change description. Never infer capabilities from a model-family substring or silently copy another provider's deployment limits.
 3. Add a regression case that reproduces the incorrect limit, price, thinking choice, or outgoing request before changing metadata. Check both the selectable Pi levels and the actual `reasoning_effort` payload; a visible selector alone does not prove the control works.
 4. Update the exact-ID metadata and relevant README information. Preserve unknown-model discovery and its explicit unverified/estimated labels.
 5. Test cached fallback upgrades as well as fresh discovery. Run the complete offline suite, not only the new case.

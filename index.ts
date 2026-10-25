@@ -57,15 +57,15 @@ export function riverModelIds(body: unknown): string[] {
 }
 
 // https://docs.river.ai/guides/inference-controls/
+// Kimi: https://platform.kimi.ai/docs/guide/kimi-k3-quickstart
 export function riverThinking(id: string): { effort: boolean; map?: Record<string, string | null> } {
-	if (id === GLM) {
+	if (id === GLM || id === KIMI) {
 		return { effort: true, map: { off: null, minimal: null, low: "low", medium: null, high: "high", xhigh: null, max: "max" } };
 	}
 	if (id === DEEPSEEK || id === DEEPSEEK_1017) {
 		return { effort: true, map: { off: "none", minimal: null, low: null, medium: null, high: "high", xhigh: null, max: "max" } };
 	}
-	// Kimi's default reasoning was live-verified; River publishes no effort controls for these models.
-	if (id === NEMOTRON || id === QWEN || id === KIMI) {
+	if (id === NEMOTRON || id === QWEN) {
 		// Pi has no "automatic" label: keep one enabled slot, never a fake Off control.
 		return { effort: false, map: { off: null, minimal: null, low: null, medium: null, high: "auto", xhigh: null, max: null } };
 	}
