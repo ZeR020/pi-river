@@ -154,10 +154,16 @@ test("refresh failures remain visible without losing the last good live or saved
 		assert.ok(result.errors.has("river"));
 		assert.equal(models.getModels("river")[0]?.id, GLM);
 		assert.doesNotMatch(String(result.errors.get("river")), /secret body|fake-test-key/);
-		const restored = await ModelRuntime.create(options);
-		restored.registerProvider("river", config);
-		await restored.refresh({ providers: ["river"], allowNetwork: false });
-		assert.equal(restored.getModels("river")[0]?.id, GLM);
+		// Pi can flush the persisted catalog after refresh resolves; restoration is the contract, so wait for it.
+		let restoredId: string | undefined;
+		for (let attempt = 0; attempt < 20 && restoredId !== GLM; attempt++) {
+			const restored = await ModelRuntime.create(options);
+			restored.registerProvider("river", config);
+			await restored.refresh({ providers: ["river"], allowNetwork: false });
+			restoredId = restored.getModels("river")[0]?.id;
+			if (restoredId !== GLM) await new Promise((resolve) => setTimeout(resolve, 50));
+		}
+		assert.equal(restoredId, GLM);
 	}
 	response = () => Response.json(catalog([]));
 	const empty = await models.refresh({ providers: ["river"], allowNetwork: true });
