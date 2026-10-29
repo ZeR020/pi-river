@@ -40,24 +40,26 @@ The extension has verified configuration for the following models. Context and o
 
 | Model | Context | Maximum output | Thinking settings |
 | --- | ---: | ---: | --- |
-| DeepSeek-V4.1-Flash | 1,048,576 | 384,000 | Off / High / Max |
-| DeepSeek-V4.1-Flash-1017 | 1,048,576 | 384,000 | Off / High / Max |
+| DeepSeek-V4.1-Flash | 1,048,576 | 384,000 | Off / Low / High / Max |
+| DeepSeek-V4.1-Flash-1017 | 1,048,576 | 384,000 | Off / Low / High / Max |
 | GLM-5.3-Flash | 1,048,576 | 128,000 | Low / High / Max |
-| Nemotron-3.5-Super-VL-120B-A12B-NVFP4 | 1,048,576 | 128,000 | Automatic |
-| Qwen3.8-27B-FP8 | 262,144 | 262,143 | Automatic |
-| Kimi-K3 | 1,048,576 | 32,768 | Low / High / Max |
+| GLM-5.3 | 1,048,576 | 128,000 | Low / High / Max |
+| Nemotron-3.5-Super-VL-120B-A12B-NVFP4 | 1,048,576 | 128,000 | Off / High |
+| Qwen3.8-27B-FP8 | 262,144 | 262,143 | Off / Low / Medium / XHigh |
+| Kimi-K3 | 1,048,576 | 32,768 | Off / Max |
 
-These models accept text and images. Reasoning tokens and the final answer share the output limit. River lists GLM and Nemotron output as `128K`; the extension conservatively uses 128,000.
+These models accept text and images, except the full GLM-5.3, which is text only. Reasoning tokens and the final answer share the output limit. River lists GLM and Nemotron output as `128K`; the extension conservatively uses 128,000.
 Pi may send a smaller output budget to leave room for your input and its context safety margin.
 
-GLM and Kimi cannot turn reasoning off. Kimi exposes its documented Low / High / Max efforts. Nemotron and Qwen have no documented effort controls: Pi shows a single **High** setting, and their model names identify reasoning as automatic. That setting sends no effort parameter.
+GLM-5.3-Flash and the full GLM-5.3 cannot turn reasoning off. Every other listed model can, through its Off setting. River sets each model's default: maximum effort for GLM and Kimi, XHigh for Qwen, on for Nemotron, and off for DeepSeek.
 
-Specifications are based on River's [model documentation](https://docs.river.ai/guides/inference-models/), [reasoning controls](https://docs.river.ai/guides/inference-controls/), and Kimi's [official model guide](https://platform.kimi.ai/docs/guide/kimi-k3-quickstart).
+Specifications are based on River's [model documentation](https://docs.river.ai/guides/inference-models/), [reasoning controls](https://docs.river.ai/guides/inference-controls/). Where River and a model author's guide differ (Kimi-K3), River's deployment table is used.
 
 Rates for the new models (USD per million tokens):
 
 | Model | Input | Cached input | Output |
 | --- | ---: | ---: | ---: |
+| GLM-5.3 | $1.12 | $0.208 | $3.52 |
 | Qwen3.8-27B-FP8 | $0.10 | $0.02 | $2.00 |
 | Kimi-K3 | $3.00 | $0.30 | $15.00 |
 

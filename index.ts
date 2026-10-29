@@ -7,6 +7,7 @@ const DEEPSEEK_1017 = "deepseek-ai/DeepSeek-V4.1-Flash-1017";
 const NEMOTRON = "nvidia/NVIDIA-Nemotron-3.5-Super-VL-120B-A12B-NVFP4";
 const QWEN = "Qwen/Qwen3.8-27B-FP8";
 const KIMI = "moonshotai/Kimi-K3";
+const GLM_FULL = "GLM-5.3";
 
 const COMPAT = {
 	supportsStore: false,
@@ -25,11 +26,13 @@ const COMPAT = {
 
 // Metadata, not catalog membership: only /models decides which IDs exist.
 // https://docs.river.ai/guides/inference-models/
-const METADATA: Record<string, { contextWindow: number; maxTokens: number }> = {
+const METADATA: Record<string, { contextWindow: number; maxTokens: number; image?: boolean }> = {
 	[DEEPSEEK]: { contextWindow: 1_048_576, maxTokens: 384_000 },
 	[DEEPSEEK_1017]: { contextWindow: 1_048_576, maxTokens: 384_000 },
 	// River prints 128K; use 128,000 without assuming binary units.
 	[GLM]: { contextWindow: 1_048_576, maxTokens: 128_000 },
+	// https://docs.river.ai/guides/models/: the full GLM-5.3 is text only (served from nvidia/GLM-5.3-NVFP4).
+	[GLM_FULL]: { contextWindow: 1_048_576, maxTokens: 128_000, image: false },
 	[NEMOTRON]: { contextWindow: 1_048_576, maxTokens: 128_000 },
 	[QWEN]: { contextWindow: 262_144, maxTokens: 262_143 },
 	[KIMI]: { contextWindow: 1_048_576, maxTokens: 32_768 },
@@ -39,6 +42,7 @@ const PRICING: Record<string, { input: number; output: number; cacheRead: number
 	[DEEPSEEK]: { input: 0.12, output: 0.48, cacheRead: 0.0024, cacheWrite: 0 },
 	[DEEPSEEK_1017]: { input: 0.12, output: 0.48, cacheRead: 0.0024, cacheWrite: 0 },
 	[GLM]: { input: 0.12, output: 0.40, cacheRead: 0.024, cacheWrite: 0 },
+	[GLM_FULL]: { input: 1.12, output: 3.52, cacheRead: 0.208, cacheWrite: 0 },
 	[NEMOTRON]: { input: 0.07, output: 0.37, cacheRead: 0.024, cacheWrite: 0 },
 	[QWEN]: { input: 0.10, output: 2.00, cacheRead: 0.02, cacheWrite: 0 },
 	[KIMI]: { input: 3.00, output: 15.00, cacheRead: 0.30, cacheWrite: 0 },
@@ -56,18 +60,22 @@ export function riverModelIds(body: unknown): string[] {
 	return [...new Set(ids)];
 }
 
-// https://docs.river.ai/guides/inference-controls/
-// Kimi: https://platform.kimi.ai/docs/guide/kimi-k3-quickstart
+// https://docs.river.ai/guides/inference-controls/ (River's per-model table is authoritative, incl. Kimi)
 export function riverThinking(id: string): { effort: boolean; map?: Record<string, string | null> } {
-	if (id === GLM || id === KIMI) {
+	if (id === GLM || id === GLM_FULL) {
 		return { effort: true, map: { off: null, minimal: null, low: "low", medium: null, high: "high", xhigh: null, max: "max" } };
 	}
 	if (id === DEEPSEEK || id === DEEPSEEK_1017) {
-		return { effort: true, map: { off: "none", minimal: null, low: null, medium: null, high: "high", xhigh: null, max: "max" } };
+		return { effort: true, map: { off: "none", minimal: null, low: "low", medium: null, high: "high", xhigh: null, max: "max" } };
 	}
-	if (id === NEMOTRON || id === QWEN) {
-		// Pi has no "automatic" label: keep one enabled slot, never a fake Off control.
-		return { effort: false, map: { off: null, minimal: null, low: null, medium: null, high: "auto", xhigh: null, max: null } };
+	if (id === NEMOTRON) {
+		return { effort: true, map: { off: "none", minimal: null, low: null, medium: null, high: "high", xhigh: null, max: null } };
+	}
+	if (id === QWEN) {
+		return { effort: true, map: { off: "none", minimal: null, low: "low", medium: "medium", high: null, xhigh: "xhigh", max: null } };
+	}
+	if (id === KIMI) {
+		return { effort: true, map: { off: "none", minimal: null, low: null, medium: null, high: null, xhigh: null, max: "max" } };
 	}
 	return { effort: false };
 }
@@ -78,13 +86,12 @@ function modelConfig(id: string) {
 	const thinking = riverThinking(id);
 	let name = id;
 	if (!metadata) name += pricing ? " (unverified capabilities and limits)" : " (unverified metadata; estimated pricing)";
-	if (thinking.map && !thinking.effort) name += " (automatic reasoning)";
 	return {
 		id,
 		name,
 		api: "openai-completions" as const,
 		reasoning: Boolean(thinking.map),
-		input: (metadata ? ["text", "image"] : ["text"]) as ("text" | "image")[],
+		input: (metadata?.image === false ? ["text"] : metadata ? ["text", "image"] : ["text"]) as ("text" | "image")[],
 		// Pi requires numeric rates: unknown IDs use explicitly labeled placeholders, not a claim of free inference.
 		cost: pricing ?? { input: 0.12, output: 0.48, cacheRead: 0.024, cacheWrite: 0 },
 		contextWindow: metadata?.contextWindow ?? 16_384,
