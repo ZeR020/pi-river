@@ -28,12 +28,12 @@ exec bwrap --unshare-all --die-with-parent --new-session --clearenv \
   --ro-bind "$node_home" /node \
   --ro-bind "$typescript_root" /typescript \
   --tmpfs /home --tmpfs /tmp --tmpfs /workspace --proc /proc --dev /dev \
-  --ro-bind "$PWD/index.ts" /workspace/index.ts \
-  --ro-bind "$PWD/index.test.ts" /workspace/index.test.ts \
+  --ro-bind "$PWD/extensions/river.ts" /workspace/extensions/river.ts \
+  --ro-bind "$PWD/extensions/river.test.ts" /workspace/extensions/river.test.ts \
   --ro-bind "$PWD/tsconfig.json" /workspace/tsconfig.json \
   "${node_modules_args[@]}" \
   --ro-bind "$pi_root" /workspace/node_modules/@earendil-works/pi-coding-agent \
   --setenv HOME /tmp --setenv PATH /node/bin:/usr/bin:/bin \
   --setenv PI_CODING_AGENT_DIR /tmp/agent --setenv PI_OFFLINE 1 \
   --setenv RIVER_API_KEY fake-test-key --chdir /workspace \
-  /bin/bash -c '/node/bin/node /typescript/lib/tsc.js --project tsconfig.json && echo "TypeScript check passed" && exec /node/bin/node --experimental-strip-types --test index.test.ts'
+  /bin/bash -c '/node/bin/node /typescript/lib/tsc.js --project tsconfig.json && echo "TypeScript check passed" && exec /node/bin/node --experimental-strip-types --test extensions/river.test.ts'

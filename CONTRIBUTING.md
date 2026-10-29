@@ -4,8 +4,8 @@ Bug reports and focused pull requests are welcome. Describe the problem you are 
 
 ## Source layout
 
-- `index.ts` — provider registration, API-key resolution, catalog validation/persistence, and exact-ID metadata. Streaming delegates to Pi rather than a custom adapter.
-- `index.test.ts` — native Pi integration and request-payload regression tests with fake HTTP responses and credentials.
+- `extensions/river.ts` — provider registration, API-key resolution, catalog validation/persistence, and exact-ID metadata. Streaming delegates to Pi rather than a custom adapter.
+- `extensions/river.test.ts` — native Pi integration and request-payload regression tests with fake HTTP responses and credentials.
 - `test.sh` — offline Bubblewrap test runner and strict TypeScript check.
 - `tsconfig.json` — SDK/Node type resolution for the sandbox and local editor tooling.
 - `package.json` — Pi extension manifest; the SDK is supplied by the host, not bundled.
@@ -28,7 +28,7 @@ The runner mounts source and installed packages read-only, hides the host home, 
 To try the source in Pi without registering a persistent installation:
 
 ```bash
-pi -e ./index.ts
+pi -e ./extensions/river.ts
 ```
 
 Use a separate test session and avoid loading another copy of this provider in the same session. Source loading normally contacts River's catalog when credentials are available; `PI_OFFLINE=1` suppresses that startup request. A live model prompt is billed inference, unlike the offline suite.

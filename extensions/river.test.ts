@@ -6,7 +6,7 @@ import { spawnSync } from "node:child_process";
 import test, { type TestContext } from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type { ExtensionAPI, ProviderConfig } from "@earendil-works/pi-coding-agent";
-import registerRiver, { riverModelIds, riverThinking } from "./index.ts";
+import registerRiver, { riverModelIds, riverThinking } from "./river.ts";
 
 const piDist = dirname(fileURLToPath(import.meta.resolve("@earendil-works/pi-coding-agent")));
 // Nested (global install) or hoisted (local dev dependency) layout.
@@ -344,7 +344,7 @@ for (const id of [GLM, KIMI]) test(`native ${id} requests preserve images, tools
 test("Pi extension loader accepts the provider factory", async () => {
 	const { loadExtensions } = await import(pathToFileURL(join(piDist, "core/extensions/loader.js")).href);
 	const { createEventBus } = await import(pathToFileURL(join(piDist, "core/event-bus.js")).href);
-	const loaded = await loadExtensions([join(process.cwd(), "index.ts")], process.cwd(), createEventBus());
+	const loaded = await loadExtensions([join(process.cwd(), "extensions/river.ts")], process.cwd(), createEventBus());
 	assert.deepEqual(loaded.errors, []);
 	assert.equal(loaded.runtime.pendingProviderRegistrations[0]?.name, "river");
 });
@@ -353,7 +353,7 @@ for (const entry of ["cli.js", "bundle/cli.js"]) {
 	test(`cold Pi ${entry} lists discovered River models without a pre-existing cache`, () => {
 		const dir = mkdtempSync(join(tmpdir(), "river-cli-"));
 		// Pi configures undici during CLI setup. Keep the deliberately mocked HTTP boundary across that setup.
-		const script = `const mockFetch = async (url) => { if (String(url) !== 'https://api.river.ai/v1/models') throw new Error('unexpected network'); return Response.json(${JSON.stringify(catalog([GLM, DS, DS1017, QWEN, GLM3, KIMI]))}); }; Object.defineProperty(globalThis, 'fetch', {configurable: true, get: () => mockFetch, set: () => {}}); process.argv = ['node', 'pi', '--no-extensions', '--no-skills', '--no-prompt-templates', '--no-themes', '--no-mcp', '-e', '/workspace/index.ts', '--list-models', 'river']; await import(${JSON.stringify(pathToFileURL(join(piDist, entry)).href)});`;
+		const script = `const mockFetch = async (url) => { if (String(url) !== 'https://api.river.ai/v1/models') throw new Error('unexpected network'); return Response.json(${JSON.stringify(catalog([GLM, DS, DS1017, QWEN, GLM3, KIMI]))}); }; Object.defineProperty(globalThis, 'fetch', {configurable: true, get: () => mockFetch, set: () => {}}); process.argv = ['node', 'pi', '--no-extensions', '--no-skills', '--no-prompt-templates', '--no-themes', '--no-mcp', '-e', '/workspace/extensions/river.ts', '--list-models', 'river']; await import(${JSON.stringify(pathToFileURL(join(piDist, entry)).href)});`;
 		const child = spawnSync(process.execPath, ["--input-type=module", "-e", script], { encoding: "utf8", timeout: 20000, env: { ...process.env, PI_OFFLINE: "0", PI_CODING_AGENT_DIR: dir } });
 		assert.equal(child.status, 0, child.stderr);
 		assert.match(child.stdout, /zai-org\/GLM-5\.3-Flash/, child.stderr);

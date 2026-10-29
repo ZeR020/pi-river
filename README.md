@@ -57,14 +57,6 @@ GLM-5.3-Flash and the full GLM-5.3 cannot turn reasoning off. Every other listed
 
 Specifications are based on River's [model documentation](https://docs.river.ai/guides/inference-models/), [reasoning controls](https://docs.river.ai/guides/inference-controls/). Where River and a model author's guide differ (Kimi-K3), River's deployment table is used.
 
-Rates for the new models (USD per million tokens):
-
-| Model | Input | Cached input | Output |
-| --- | ---: | ---: | ---: |
-| GLM-5.3 | $1.12 | $0.208 | $3.52 |
-| Qwen3.8-27B-FP8 | $0.10 | $0.02 | $2.00 |
-| Kimi-K3 | $3.00 | $0.30 | $15.00 |
-
 ### What model discovery does
 
 The extension fetches the models available to your River account, so newly released models can appear without adding their IDs by hand.

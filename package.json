@@ -13,14 +13,14 @@
   },
   "type": "module",
   "files": [
-    "index.ts"
+    "extensions/river.ts"
   ],
   "engines": {
     "node": ">=22.19.0"
   },
   "pi": {
     "extensions": [
-      "./index.ts"
+      "./extensions/river.ts"
     ]
   },
   "scripts": {
