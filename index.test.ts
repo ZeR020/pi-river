@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -9,7 +9,9 @@ import type { ExtensionAPI, ProviderConfig } from "@earendil-works/pi-coding-age
 import registerRiver, { riverModelIds, riverThinking } from "./index.ts";
 
 const piDist = dirname(fileURLToPath(import.meta.resolve("@earendil-works/pi-coding-agent")));
-const aiDist = join(piDist, "../node_modules/@earendil-works/pi-ai/dist");
+// Nested (global install) or hoisted (local dev dependency) layout.
+const aiDist = [join(piDist, "../node_modules/@earendil-works/pi-ai/dist"), join(piDist, "../../pi-ai/dist")].find(existsSync);
+if (!aiDist) throw new Error("Cannot locate @earendil-works/pi-ai runtime files");
 const { ModelRuntime } = await import(pathToFileURL(join(piDist, "core/model-runtime.js")).href);
 const { getSupportedThinkingLevels, calculateCost } = await import(pathToFileURL(join(aiDist, "models.js")).href);
 const { streamSimple } = await import(pathToFileURL(join(aiDist, "api/openai-completions.js")).href);
@@ -299,7 +301,7 @@ test("rejected publications do not install or consume a bootstrap catalog", asyn
 	const base = { allowNetwork: false, signal: new AbortController().signal };
 	assert.deepEqual(await config.refreshModels!({ ...base, publish: async () => false }), []);
 	const published: unknown[] = [];
-	const accepted = await config.refreshModels!({ ...base, publish: async (value) => { published.push(value); return true; } });
+	const accepted = await config.refreshModels!({ ...base, publish: async (value: unknown) => { published.push(value); return true; } });
 	assert.equal(accepted[0]?.id, GLM);
 	assert.equal(published.length, 1);
 	assert.deepEqual(await config.refreshModels!({ ...base, allowNetwork: true, credential: { type: "api_key", key: "fake-test-key" }, publish: async () => false }), []);

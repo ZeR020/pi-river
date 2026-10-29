@@ -14,15 +14,14 @@ Bug reports and focused pull requests are welcome. Describe the problem you are 
 
 Clone the repository into your own source checkout. Work there rather than patching a Pi-managed installation.
 
-The existing test runner requires Linux (including WSL), Bash, Bubblewrap (`bwrap`), Node 24, Pi on `PATH`, and an existing TypeScript compiler. Pi must be installed under the active Node prefix so the sandbox's SDK paths resolve. The runner installs nothing.
-
-From the repository root:
+The test runner requires Linux (including WSL), Bash, Bubblewrap (`bwrap`), and Node 22.19 or newer. Install the development dependencies and run the suite:
 
 ```bash
-PI_RIVER_TYPESCRIPT_DIR=/absolute/path/to/typescript bash test.sh
+npm ci
+npm test
 ```
 
-Set the variable to the TypeScript package directory containing `lib/tsc.js`, not the executable or its `lib` directory. If omitted, the runner checks `~/.pi-lens/tools/node_modules/typescript`. With that default available, `npm test` runs the same suite.
+`npm test` resolves the Pi SDK and TypeScript compiler from `node_modules`; the runner installs nothing by itself. A globally installed Pi also works: `bash test.sh` uses the `pi` on your `PATH` and, without a local compiler, falls back to a compiler under `PI_RIVER_TYPESCRIPT_DIR` (a package directory containing `lib/tsc.js`) or `~/.pi-lens/tools/node_modules/typescript`.
 
 The runner mounts source and installed packages read-only, hides the host home, clears the environment, and isolates networking and processes. Tests use fake credentials and responses; fixtures are written only inside the sandbox. No River account or live inference is needed. Running TypeScript directly outside the sandbox may require adjusting local SDK/type-resolution paths.
 
@@ -55,6 +54,12 @@ Reasoning tokens share the output budget and count as output usage. Prices are U
 - Run `bash test.sh` (with `PI_RIVER_TYPESCRIPT_DIR` if needed) and `git diff --check`; include the results and tested Pi/Node versions in the pull request.
 - Describe the user-visible change, evidence, compatibility considerations, and anything not checked. Keep documentation consistent with behavior; do not describe ID-only discovery as automatic specification discovery.
 - Do not change repository visibility, choose or replace a license, publish packages, or create releases as an incidental part of another change.
+
+## Releases
+
+Publishing is maintainer-only. Bump `version` in `package.json`, commit, and tag `v<version>` (for example `v0.1.0`) on `main`. Pushing the tag runs the release workflow: it re-runs the offline suite, verifies the tag matches `package.json`, and publishes to npm with provenance using the `NPM_TOKEN` repository secret.
+
+The token is a granular npm access token (publish permission, 2FA bypass enabled) and expires after at most 90 days; rotate it in npm account settings and update the repository secret before expiry. The very first release may instead be published manually with `npm publish` after `npm login`; subsequent releases use the workflow.
 
 ## Reporting problems
 

@@ -8,9 +8,16 @@
     "skipLibCheck": true,
     "allowImportingTsExtensions": true,
     "types": ["node"],
-    "typeRoots": ["/node/lib/node_modules/@earendil-works/pi-coding-agent/node_modules/@types", "../../../.nvm/versions/node/v24.19.0/lib/node_modules/@earendil-works/pi-coding-agent/node_modules/@types"],
+    "typeRoots": [
+      "./node_modules/@earendil-works/pi-coding-agent/node_modules/@types",
+      "./node_modules/@types",
+      "/node/lib/node_modules/@earendil-works/pi-coding-agent/node_modules/@types"
+    ],
     "paths": {
-      "@earendil-works/pi-coding-agent": ["/node/lib/node_modules/@earendil-works/pi-coding-agent/dist/index.d.ts", "../../../.nvm/versions/node/v24.19.0/lib/node_modules/@earendil-works/pi-coding-agent/dist/index.d.ts"]
+      "@earendil-works/pi-coding-agent": [
+        "./node_modules/@earendil-works/pi-coding-agent/dist/index.d.ts",
+        "/node/lib/node_modules/@earendil-works/pi-coding-agent/dist/index.d.ts"
+      ]
     }
   },
   "include": ["*.ts"]

@@ -1,15 +1,22 @@
 {
   "name": "pi-river",
   "version": "0.1.0",
-  "private": true,
   "description": "River.ai provider for Pi",
-  "type": "module",
   "keywords": [
     "pi-package"
   ],
+  "license": "MIT",
+  "author": "ZeR020",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ZeR020/pi-river.git"
+  },
+  "type": "module",
+  "files": [
+    "index.ts"
+  ],
+  "engines": {
+    "node": ">=22.19.0"
   },
   "pi": {
     "extensions": [
@@ -21,5 +28,10 @@
   },
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": "*"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "^1.4.0",
+    "@types/node": "^24.0.0",
+    "typescript": "~5.9.3"
   }
 }
