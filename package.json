@@ -12,6 +12,9 @@
     "url": "git+https://github.com/ZeR020/pi-river.git"
   },
   "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
   "files": [
     "extensions/river.ts"
   ],
