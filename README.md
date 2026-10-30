@@ -14,7 +14,7 @@ Run this in your terminal:
 
 ```bash
 # Stable release from the npm registry:
-pi install pi-river
+pi install npm:pi-river
 
 # Or the latest development source from GitHub:
 pi install git:github.com/ZeR020/pi-river
