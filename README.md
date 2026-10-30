@@ -13,11 +13,14 @@ You need **Pi 1.1.0 or newer**, Git, and a **River inference API key** from the 
 Run this in your terminal:
 
 ```bash
+# Stable release from the npm registry:
+pi install pi-river
+
+# Or the latest development source from GitHub:
 pi install git:github.com/ZeR020/pi-river
 ```
 
-
-This installs the current development source. The package is also published on the npm registry, so `pi install pi-river` installs the latest stable release instead. Either way, Pi loads the extension — plain `npm install` does not register Pi packages.
+Both use Pi's package manager and register the extension. Plain `npm install pi-river` only downloads the files — Pi never loads it that way.
 Then start Pi. If Pi is already running, enter `/reload` to load the extension.
 
 ### 2. Connect your River account
