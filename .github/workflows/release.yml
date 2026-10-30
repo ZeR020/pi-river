@@ -11,7 +11,7 @@ jobs:
   test-and-publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write # create GitHub Release after publish
       id-token: write # OIDC for npm publish --provenance
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -34,3 +34,7 @@ jobs:
       - run: npm publish --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Create the GitHub Release
+        run: gh release create "$GITHUB_REF_NAME" --generate-notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

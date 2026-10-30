@@ -57,7 +57,7 @@ Reasoning tokens share the output budget and count as output usage. Prices are U
 
 ## Releases
 
-Publishing is maintainer-only. Bump `version` in `package.json`, commit, and tag `v<version>` (for example `v0.1.0`) on `main`. Pushing the tag runs the release workflow: it re-runs the offline suite, verifies the tag matches `package.json`, and publishes to npm with provenance using the `NPM_TOKEN` repository secret.
+Publishing is maintainer-only. Bump `version` in `package.json`, commit, and tag `v<version>` (for example `v0.1.0`) on `main`. Pushing the tag runs the release workflow: it re-runs the offline suite, verifies the tag matches `package.json`, publishes to npm with provenance using the `NPM_TOKEN` repository secret, and finally creates the GitHub Release with generated notes. The tag stays the trigger so a failed publish never leaves a dangling public Release.
 
 The token is a granular npm access token (publish permission, 2FA bypass enabled) and expires after at most 90 days; rotate it in npm account settings and update the repository secret before expiry. The very first release may instead be published manually with `npm publish` after `npm login`; subsequent releases use the workflow.
 
