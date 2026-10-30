@@ -1,5 +1,7 @@
 # pi-river
 
+[![npm version](https://img.shields.io/npm/v/pi-river)](https://www.npmjs.com/package/pi-river) [![license](https://img.shields.io/npm/l/pi-river)](LICENSE) [![npm downloads](https://img.shields.io/npm/dm/pi-river)](https://www.npmjs.com/package/pi-river)
+
 Use [River.ai](https://river.ai) models in [Pi](https://pi.dev), including DeepSeek, GLM, Nemotron, Qwen, and Kimi. The extension adds River to Pi's model picker with model discovery, thinking controls, image input, tool calling, and token/cost tracking.
 
 ## Quick start
