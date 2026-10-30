@@ -6,18 +6,18 @@ Use [River.ai](https://river.ai) models in [Pi](https://pi.dev), including DeepS
 
 ## Quick start
 
-You need **Pi 1.1.0 or newer** and a **River inference API key** from the [River console](https://console.river.ai). The extension has been tested with Pi 1.4.0.
+You need **Pi 1.1.0 or newer**, Git, and a **River inference API key** from the [River console](https://console.river.ai). The extension has been tested with Pi 1.4.0.
 
 ### 1. Install
 
 Run this in your terminal:
 
 ```bash
-pi install pi-river
+pi install git:github.com/ZeR020/pi-river
 ```
 
 
-To install the current development source instead of the published package, run `pi install git:github.com/ZeR020/pi-river`.
+This installs the current development source. The package is also published on the npm registry, so `pi install pi-river` installs the latest stable release instead. Either way, Pi loads the extension — plain `npm install` does not register Pi packages.
 Then start Pi. If Pi is already running, enter `/reload` to load the extension.
 
 ### 2. Connect your River account
