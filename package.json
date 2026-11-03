@@ -1,6 +1,6 @@
 {
   "name": "pi-river",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "River.ai provider for Pi",
   "keywords": [
     "pi-package"
@@ -16,7 +16,8 @@
     "access": "public"
   },
   "files": [
-    "extensions/river.ts"
+    "extensions/river.ts",
+    "CHANGELOG.md"
   ],
   "engines": {
     "node": ">=22.19.0"
