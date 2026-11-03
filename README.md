@@ -64,7 +64,7 @@ Specifications are based on River's [model documentation](https://docs.river.ai/
 
 ### What model discovery does
 
-The extension fetches the models available to your River account, so newly released models can appear without adding their IDs by hand.
+The extension fetches the models listed for your River account, so newly released models can appear without adding their IDs by hand. River's list can omit models your key can still call (verified against the API on 2026-11-03), so the catalog is the union of the live list and the extension's docs-verified models: omissions never hide a working model, and genuinely new live-only models still appear with unverified labeling.
 
 **Discovery does not automatically configure a new model's specifications.** River's model-list API returns IDs but no context limits, thinking settings, capabilities, or prices. Those details are verified and maintained in the extension separately.
 

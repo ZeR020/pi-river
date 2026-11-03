@@ -152,7 +152,7 @@ test("refresh failures remain visible without losing the last good live or saved
 		response = bad;
 		const result = await models.refresh({ providers: ["river"], allowNetwork: true });
 		assert.ok(result.errors.has("river"));
-		assert.equal(models.getModels("river")[0]?.id, GLM);
+		assert.ok(models.getModels("river").some((m: any) => m.id === GLM));
 		assert.doesNotMatch(String(result.errors.get("river")), /secret body|fake-test-key/);
 		// Pi can flush the persisted catalog after refresh resolves; restoration is the contract, so wait for it.
 		let restoredId: string | undefined;
@@ -160,7 +160,7 @@ test("refresh failures remain visible without losing the last good live or saved
 			const restored = await ModelRuntime.create(options);
 			restored.registerProvider("river", config);
 			await restored.refresh({ providers: ["river"], allowNetwork: false });
-			restoredId = restored.getModels("river")[0]?.id;
+			restoredId = restored.getModels("river").find((m: any) => m.id === GLM)?.id;
 			if (restoredId !== GLM) await new Promise((resolve) => setTimeout(resolve, 50));
 		}
 		assert.equal(restoredId, GLM);
@@ -168,7 +168,8 @@ test("refresh failures remain visible without losing the last good live or saved
 	response = () => Response.json(catalog([]));
 	const empty = await models.refresh({ providers: ["river"], allowNetwork: true });
 	assert.equal(empty.errors.size, 0);
-	assert.equal(models.getModels("river").length, 0);
+	// An empty live catalog is maximal omission: the docs-verified models stay selectable.
+	assert.deepEqual(models.getModels("river").map((m: any) => m.id), [DS, DS1017, GLM, GLM3, NV, QWEN, KIMI]);
 });
 
 test("offline restoration upgrades the previous zero-price snapshot", async () => {
@@ -251,11 +252,11 @@ test("cold factory seeds real catalog membership and persists it during offline 
 	t.mock.method(globalThis, "fetch", async (url: unknown) => { calls++; assert.equal(String(url), "https://api.river.ai/v1/models"); return Response.json(catalog([UNKNOWN, GLM])); });
 	const { models, options, config } = await runtime();
 	assert.equal(calls, 1);
-	assert.deepEqual(models.getModels("river").map((m: any) => m.id), [UNKNOWN, GLM]);
+	assert.deepEqual(models.getModels("river").map((m: any) => m.id), [DS, DS1017, GLM, GLM3, NV, QWEN, KIMI, UNKNOWN]);
 	const restored = await ModelRuntime.create(options);
 	restored.registerProvider("river", config);
 	await restored.refresh({ providers: ["river"], allowNetwork: false });
-	assert.equal(restored.getModels("river").length, 2);
+	assert.equal(restored.getModels("river").length, 8);
 });
 
 test("cold startup honors stored credentials before the environment key", async (t) => {
@@ -308,7 +309,7 @@ test("rejected publications do not install or consume a bootstrap catalog", asyn
 	assert.deepEqual(await config.refreshModels!({ ...base, publish: async () => false }), []);
 	const published: unknown[] = [];
 	const accepted = await config.refreshModels!({ ...base, publish: async (value: unknown) => { published.push(value); return true; } });
-	assert.equal(accepted[0]?.id, GLM);
+	assert.ok(accepted.some((m) => m.id === GLM));
 	assert.equal(published.length, 1);
 	assert.deepEqual(await config.refreshModels!({ ...base, allowNetwork: true, credential: { type: "api_key", key: "fake-test-key" }, publish: async () => false }), []);
 });
@@ -330,6 +331,16 @@ test("requests to River carry no SDK platform telemetry headers", async (t) => {
 	assert.equal(wireHeaders.get("authorization"), "Bearer fake-test-key");
 });
 
+
+test("docs-verified models stay selectable when the live catalog omits them", async (t) => {
+	env(t, "RIVER_API_KEY", "fake-test-key");
+	t.mock.method(globalThis, "fetch", async () => Response.json(catalog([GLM, UNKNOWN])));
+	const { models } = await runtime();
+	await models.refresh({ providers: ["river"], allowNetwork: true });
+	// /v1/models returned only GLM + UNKNOWN; every docs-verified model must remain selectable.
+	for (const id of [DS, DS1017, NV, QWEN, KIMI, GLM3]) assert.ok(models.getModel("river", id), `missing docs-verified model: ${id}`);
+	assert.match(models.getModel("river", UNKNOWN)?.name ?? "", /unverified/, "live-only models keep unverified labeling");
+});
 for (const id of [GLM, KIMI]) test(`native ${id} requests preserve images, tools, JSON schema, and reasoning replay`, async (t) => {
 	t.mock.method(globalThis, "fetch", async () => Response.json(catalog([id])));
 	const { models } = await runtime();

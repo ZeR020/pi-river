@@ -40,7 +40,7 @@ const COMPAT = {
 	requiresReasoningContentOnAssistantMessages: false,
 };
 
-// Metadata, not catalog membership: only /models decides which IDs exist.
+// Metadata for the union catalog: docs-verified models stay selectable even when /models omits them.
 // https://docs.river.ai/guides/inference-models/
 const METADATA: Record<string, { contextWindow: number; maxTokens: number; image?: boolean }> = {
 	[DEEPSEEK]: { contextWindow: 1_048_576, maxTokens: 393_216 },
@@ -63,6 +63,14 @@ const PRICING: Record<string, { input: number; output: number; cacheRead: number
 	[QWEN]: { input: 0.10, output: 2.00, cacheRead: 0.02, cacheWrite: 0 },
 	[KIMI]: { input: 3.00, output: 15.00, cacheRead: 0.30, cacheWrite: 0 },
 };
+
+// /v1/models under-reports what the key can call (verified 2026-11-03: every docs-listed
+// model is served even when the live catalog omits it). Union live ids with the built-in
+// docs-verified models so omissions never hide a working model; live-only ids keep their
+// unverified labeling via modelConfig.
+function unionIds(liveIds: string[]): string[] {
+	return [...new Set([...Object.keys(METADATA), ...liveIds])];
+}
 
 export function riverModelIds(body: unknown): string[] {
 	const data = body && typeof body === "object" && "data" in body ? body.data : undefined;
@@ -207,7 +215,7 @@ export default async function (pi: ExtensionAPI) {
 			if (!context.allowNetwork) return previous;
 			const key = credentialKey(context.credential);
 			if (!key) return previous;
-			const models = (await listIds(key, context.signal)).map(modelConfig);
+			const models = unionIds(await listIds(key, context.signal)).map(modelConfig);
 			if (context.signal.aborted) return previous;
 			if (!(await context.publish({ persist: snapshot(models) }))) return previous;
 			return models;
@@ -217,7 +225,7 @@ export default async function (pi: ExtensionAPI) {
 	if (!/^(1|true|yes)$/i.test(process.env.PI_OFFLINE ?? "")) {
 		try {
 			const key = await bootstrapKey(config);
-			if (key) bootstrap = (await listIds(key, new AbortController().signal)).map(modelConfig);
+			if (key) bootstrap = unionIds(await listIds(key, new AbortController().signal)).map(modelConfig);
 		} catch (error) {
 			console.warn(error instanceof Error ? error.message : "River catalog initialization failed");
 		}
