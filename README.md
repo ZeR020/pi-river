@@ -70,6 +70,10 @@ The extension fetches the models available to your River account, so newly relea
 
 An unrecognized model is labeled **unverified metadata; estimated pricing**. It uses text-only input, no selectable thinking controls, and placeholder limits of 16,384 context / 4,096 output tokens. These are conservative defaults, not the model's actual specifications. An extension update is needed to add verified support.
 
+## Privacy
+
+The extension sends River only what the API needs: your API key, the request itself (conversation content and parameters), and a neutral `pi` user agent. The OpenAI SDK's platform headers (`X-Stainless-*` carrying OS, architecture, and runtime details) are removed from every request, and the extension contains no telemetry, analytics, or device fingerprinting. Pi's optional install telemetry never goes to River and is off unless you enable it. Your IP address is necessarily visible to River while connected to its servers; hiding it would require routing traffic through a proxy or VPN.
+
 ## Usage and costs
 
 Pi tracks token usage and estimates cost using the extension's model pricing, including discounted cached input. Rates are maintained in the extension; they are not fetched automatically. Check [River's current prices](https://console.river.ai/api/public/pricing) for billing rates. Prices labeled estimated are placeholders, not guaranteed upper bounds; Pi's display is not an invoice.

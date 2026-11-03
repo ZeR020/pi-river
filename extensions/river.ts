@@ -1,4 +1,5 @@
 import { ModelRuntime, type ExtensionAPI, type ProviderConfig } from "@earendil-works/pi-coding-agent";
+import { streamSimple as nativeStreamSimple } from "@earendil-works/pi-ai/compat";
 
 const BASE_URL = "https://api.river.ai/v1";
 const GLM = "zai-org/GLM-5.3-Flash";
@@ -8,6 +9,21 @@ const NEMOTRON = "nvidia/NVIDIA-Nemotron-3.5-Super-VL-120B-A12B-NVFP4";
 const QWEN = "Qwen/Qwen3.8-27B-FP8";
 const KIMI = "moonshotai/Kimi-K3";
 const GLM_FULL = "GLM-5.3";
+
+// Request headers are the only layer where null suppresses a header: config- and
+// model-level headers reject null values during auth resolution.
+const NO_TELEMETRY_HEADERS: Record<string, string | null> = {
+	"User-Agent": "pi",
+	"X-Stainless-Lang": null,
+	"X-Stainless-Package-Version": null,
+	"X-Stainless-OS": null,
+	"X-Stainless-Arch": null,
+	"X-Stainless-Runtime": null,
+	"X-Stainless-Runtime-Version": null,
+	"X-Stainless-Retry-Count": null,
+	"X-Stainless-Timeout": null,
+	"X-Stainless-Helper-Method": null,
+};
 
 const COMPAT = {
 	supportsStore: false,
@@ -121,7 +137,7 @@ async function listIds(key: string, signal: AbortSignal): Promise<string[]> {
 	let response: Response;
 	try {
 		response = await fetch(`${BASE_URL}/models`, {
-			headers: { Authorization: `Bearer ${key}`, Accept: "application/json" }, signal: requestSignal,
+			headers: { Authorization: `Bearer ${key}`, Accept: "application/json", "User-Agent": "pi" }, signal: requestSignal,
 		});
 	} catch {
 		throw new Error("River model list request failed (network, timeout, or cancellation)");
@@ -160,6 +176,14 @@ export default async function (pi: ExtensionAPI) {
 		api: "openai-completions",
 		apiKey: "$RIVER_API_KEY",
 		authHeader: true,
+		// Route every request through the native client with telemetry suppressed: the
+		// OpenAI SDK's X-Stainless platform/retry headers and the detailed OS/arch user
+		// agent never reach River.
+		streamSimple: (model, context, options) =>
+			nativeStreamSimple(model, context, {
+				...options,
+				headers: { ...options?.headers, ...NO_TELEMETRY_HEADERS },
+			}),
 		models: bootstrap,
 		oauth: {
 			name: "River",

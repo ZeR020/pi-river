@@ -314,6 +314,22 @@ test("rejected publications do not install or consume a bootstrap catalog", asyn
 });
 
 
+test("requests to River carry no SDK platform telemetry headers", async (t) => {
+	env(t, "RIVER_API_KEY", "fake-test-key");
+	t.mock.method(globalThis, "fetch", async () => Response.json(catalog([GLM])));
+	const { models } = await runtime();
+	await models.refresh({ providers: ["river"], allowNetwork: true });
+	let wireHeaders: Headers | undefined;
+		await models.streamSimple(models.getModel("river", GLM)!, context, { reasoning: "high", maxRetries: 0,
+		fetch: async (_url: unknown, init: any) => { wireHeaders = new Headers(init.headers); return reply([chunk({ content: "ok" }, "stop")]); },
+	}).result();
+	assert.ok(wireHeaders);
+	const names = [...wireHeaders.keys()];
+	assert.ok(names.every((name) => !/^x-stainless/i.test(name)), `unexpected telemetry headers: ${names.join(", ")}`);
+	assert.equal(wireHeaders.get("user-agent"), "pi");
+	assert.equal(wireHeaders.get("authorization"), "Bearer fake-test-key");
+});
+
 for (const id of [GLM, KIMI]) test(`native ${id} requests preserve images, tools, JSON schema, and reasoning replay`, async (t) => {
 	t.mock.method(globalThis, "fetch", async () => Response.json(catalog([id])));
 	const { models } = await runtime();
