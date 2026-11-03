@@ -27,15 +27,15 @@ const COMPAT = {
 // Metadata, not catalog membership: only /models decides which IDs exist.
 // https://docs.river.ai/guides/inference-models/
 const METADATA: Record<string, { contextWindow: number; maxTokens: number; image?: boolean }> = {
-	[DEEPSEEK]: { contextWindow: 1_048_576, maxTokens: 384_000 },
-	[DEEPSEEK_1017]: { contextWindow: 1_048_576, maxTokens: 384_000 },
+	[DEEPSEEK]: { contextWindow: 1_048_576, maxTokens: 393_216 },
+	[DEEPSEEK_1017]: { contextWindow: 1_048_576, maxTokens: 393_216 },
 	// River prints 128K; use 128,000 without assuming binary units.
 	[GLM]: { contextWindow: 1_048_576, maxTokens: 128_000 },
 	// https://docs.river.ai/guides/models/: the full GLM-5.3 is text only (served from nvidia/GLM-5.3-NVFP4).
 	[GLM_FULL]: { contextWindow: 1_048_576, maxTokens: 128_000, image: false },
-	[NEMOTRON]: { contextWindow: 1_048_576, maxTokens: 128_000 },
+	[NEMOTRON]: { contextWindow: 1_048_576, maxTokens: 1_048_575 },
 	[QWEN]: { contextWindow: 262_144, maxTokens: 262_143 },
-	[KIMI]: { contextWindow: 1_048_576, maxTokens: 32_768 },
+	[KIMI]: { contextWindow: 1_048_576, maxTokens: 1_048_575 },
 };
 // https://console.river.ai/api/public/pricing (inference, not training_and_sampling)
 const PRICING: Record<string, { input: number; output: number; cacheRead: number; cacheWrite: number }> = {
@@ -69,7 +69,7 @@ export function riverThinking(id: string): { effort: boolean; map?: Record<strin
 		return { effort: true, map: { off: "none", minimal: null, low: "low", medium: null, high: "high", xhigh: null, max: "max" } };
 	}
 	if (id === NEMOTRON) {
-		return { effort: true, map: { off: "none", minimal: null, low: null, medium: null, high: "high", xhigh: null, max: null } };
+		return { effort: true, map: { off: "none", minimal: null, low: null, medium: "medium", high: "high", xhigh: null, max: null } };
 	}
 	if (id === QWEN) {
 		return { effort: true, map: { off: "none", minimal: null, low: "low", medium: "medium", high: null, xhigh: "xhigh", max: null } };

@@ -93,16 +93,16 @@ test("live membership uses documented prices and per-model output budgets", asyn
 	assert.equal(refreshed.errors.size, 0);
 	assert.equal(models.getModels("river").length, 8);
 	for (const [id, contextLimit, outputLimit, input, output, cacheRead] of [
-		[DS, 1048576, 384000, 0.12, 0.48, 0.0024], [GLM, 1048576, 128000, 0.12, 0.40, 0.024], [NV, 1048576, 128000, 0.07, 0.37, 0.024],
-		[DS1017, 1048576, 384000, 0.12, 0.48, 0.0024],
-		[QWEN, 262144, 262143, 0.10, 2.00, 0.02], [KIMI, 1048576, 32768, 3.00, 15.00, 0.30],
+		[DS, 1048576, 393216, 0.12, 0.48, 0.0024], [GLM, 1048576, 128000, 0.12, 0.40, 0.024], [NV, 1048576, 1048575, 0.07, 0.37, 0.024],
+		[DS1017, 1048576, 393216, 0.12, 0.48, 0.0024],
+		[QWEN, 262144, 262143, 0.10, 2.00, 0.02], [KIMI, 1048576, 1048575, 3.00, 15.00, 0.30],
 		[GLM3, 1048576, 128000, 1.12, 3.52, 0.208],
 	] as const) {
 		const model = models.getModel("river", id)!;
 		assert.equal(model.maxTokens, outputLimit);
 		const budget = (await wire(model, "max")).max_tokens;
 		// Pi reserves context headroom when the output ceiling nearly fills the window.
-		if (id === QWEN) assert.ok(budget > 250000 && budget <= outputLimit);
+		if (id === QWEN || id === NV || id === KIMI) assert.ok(budget > 250000 && budget <= outputLimit);
 		else assert.equal(budget, outputLimit);
 		assert.deepEqual(model.cost, { input, output, cacheRead, cacheWrite: 0 });
 		const usage = { input: 1000000, output: 1000000, cacheRead: 1000000, cacheWrite: 0, cost: {} };
@@ -132,7 +132,7 @@ test("actual Pi reasoning choices and requests match documented controls", async
 		[GLM3, ["low", "high", "max"], ["low", "high", "max"]],
 		[DS, ["off", "low", "high", "max"], ["none", "low", "high", "max"]],
 		[DS1017, ["off", "low", "high", "max"], ["none", "low", "high", "max"]],
-		[NV, ["off", "high"], ["none", "high"]],
+		[NV, ["off", "medium", "high"], ["none", "medium", "high"]],
 		[QWEN, ["off", "low", "medium", "xhigh"], ["none", "low", "medium", "xhigh"]],
 		[KIMI, ["off", "max"], ["none", "max"]],
 	] as const) {
@@ -178,7 +178,7 @@ test("offline restoration upgrades the previous zero-price snapshot", async () =
 	});
 	const model = restored[0];
 	assert.ok("maxTokens" in model);
-	assert.equal(model.maxTokens, 384000);
+	assert.equal(model.maxTokens, 393216);
 	assert.equal(model.cost.output, 0.48);
 	assert.equal(model.reasoning, true);
 });
@@ -191,7 +191,7 @@ test("offline restoration upgrades -1017 from unverified fallback metadata", asy
 	const model = restored[0];
 	assert.ok("maxTokens" in model);
 	assert.equal(model.contextWindow, 1048576);
-	assert.equal(model.maxTokens, 384000);
+	assert.equal(model.maxTokens, 393216);
 	assert.equal(model.name, DS1017);
 	assert.deepEqual(model.input, ["text", "image"]);
 	assert.equal(model.cost.cacheRead, 0.0024);
@@ -211,7 +211,7 @@ test("offline restoration upgrades new models to their documented capabilities a
 	assert.deepEqual(getSupportedThinkingLevels(qwen), ["off", "low", "medium", "xhigh"]);
 	assert.equal(qwen.cost.output, 2.00);
 	assert.equal(kimi.contextWindow, 1048576);
-	assert.equal(kimi.maxTokens, 32768);
+	assert.equal(kimi.maxTokens, 1048575);
 	assert.deepEqual(kimi.input, ["text", "image"]);
 	assert.deepEqual(getSupportedThinkingLevels(kimi), ["off", "max"]);
 	assert.equal(kimi.cost.output, 15.00);

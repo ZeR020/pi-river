@@ -47,15 +47,15 @@ The extension has verified configuration for the following models. Context and o
 
 | Model | Context | Maximum output | Thinking settings |
 | --- | ---: | ---: | --- |
-| DeepSeek-V4.1-Flash | 1,048,576 | 384,000 | Off / Low / High / Max |
-| DeepSeek-V4.1-Flash-1017 | 1,048,576 | 384,000 | Off / Low / High / Max |
+| DeepSeek-V4.1-Flash | 1,048,576 | 393,216 | Off / Low / High / Max |
+| DeepSeek-V4.1-Flash-1017 | 1,048,576 | 393,216 | Off / Low / High / Max |
 | GLM-5.3-Flash | 1,048,576 | 128,000 | Low / High / Max |
 | GLM-5.3 | 1,048,576 | 128,000 | Low / High / Max |
-| Nemotron-3.5-Super-VL-120B-A12B-NVFP4 | 1,048,576 | 128,000 | Off / High |
+| Nemotron-3.5-Super-VL-120B-A12B-NVFP4 | 1,048,576 | 1,048,575 | Off / Medium / High |
 | Qwen3.8-27B-FP8 | 262,144 | 262,143 | Off / Low / Medium / XHigh |
-| Kimi-K3 | 1,048,576 | 32,768 | Off / Max |
+| Kimi-K3 | 1,048,576 | 1,048,575 | Off / Max |
 
-These models accept text and images, except the full GLM-5.3, which is text only. Reasoning tokens and the final answer share the output limit. River lists GLM and Nemotron output as `128K`; the extension conservatively uses 128,000.
+These models accept text and images, except the full GLM-5.3, which is text only. Reasoning tokens and the final answer share the output limit. River lists GLM output as `128K`; the extension conservatively uses 128,000.
 Pi may send a smaller output budget to leave room for your input and its context safety margin.
 
 GLM-5.3-Flash and the full GLM-5.3 cannot turn reasoning off. Every other listed model can, through its Off setting. River sets each model's default: maximum effort for GLM and Kimi, XHigh for Qwen, on for Nemotron, and off for DeepSeek.
