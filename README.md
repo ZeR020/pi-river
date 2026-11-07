@@ -53,14 +53,15 @@ The extension has verified configuration for the following models. Context and o
 | GLM-5.3 | 1,048,576 | 128,000 | Low / High / Max |
 | Nemotron-3.5-Super-VL-120B-A12B-NVFP4 | 1,048,576 | 1,048,575 | Off / Medium / High |
 | Qwen3.8-27B-FP8 | 262,144 | 262,143 | Off / Low / Medium / XHigh |
-| Kimi-K3 | 1,048,576 | 1,048,575 | Off / Max |
+| Kimi-K3 | 1,048,576 | 1,048,575 | Off / Low / High / Max |
+| Kimi-K3.1-Pro | 1,048,576 | 1,048,575 | Off / Low / High / Max |
 
 These models accept text and images, except the full GLM-5.3, which is text only. Reasoning tokens and the final answer share the output limit. River lists GLM output as `128K`; the extension conservatively uses 128,000.
 Pi may send a smaller output budget to leave room for your input and its context safety margin.
 
 GLM-5.3-Flash and the full GLM-5.3 cannot turn reasoning off. Every other listed model can, through its Off setting. River sets each model's default: maximum effort for GLM and Kimi, XHigh for Qwen, on for Nemotron, and off for DeepSeek.
 
-Specifications are based on River's [model documentation](https://docs.river.ai/guides/inference-models/), [reasoning controls](https://docs.river.ai/guides/inference-controls/). Where River and a model author's guide differ (Kimi-K3), River's deployment table is used.
+Specifications are based on River's [model documentation](https://docs.river.ai/guides/inference-models/), [reasoning controls](https://docs.river.ai/guides/inference-controls/). Kimi-K3.1-Pro's image input follows the model author's [vision guide](https://platform.kimi.ai/docs/guide/use-kimi-vision-model); its Off level is documented as a River extension.
 
 ### What model discovery does
 

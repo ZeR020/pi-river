@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.1.2] - 2026-11-07
+
+- Added moonshotai/Kimi-K3.1-Pro from River's current documentation: 1,048,576 context, 1,048,575 maximum output, image input, and Off / Low / High / Max thinking levels (default Max; Off is a documented River extension). Priced at $2.00 input / $0.20 cached input / $10.00 output per million tokens.
+- Kimi-K3 gains Low and High thinking levels (now Off / Low / High / Max), matching River's updated reasoning-controls table, which now agrees with the model author's guide.
+
 ## [0.1.1] - 2026-11-03
 
 - Added Nemotron's `medium` thinking level (Off / Medium / High; default on/high), matching River's updated reasoning-controls table.

@@ -8,6 +8,7 @@ const DEEPSEEK_1017 = "deepseek-ai/DeepSeek-V4.1-Flash-1017";
 const NEMOTRON = "nvidia/NVIDIA-Nemotron-3.5-Super-VL-120B-A12B-NVFP4";
 const QWEN = "Qwen/Qwen3.8-27B-FP8";
 const KIMI = "moonshotai/Kimi-K3";
+const KIMI_PRO = "moonshotai/Kimi-K3.1-Pro";
 const GLM_FULL = "GLM-5.3";
 
 // Request headers are the only layer where null suppresses a header: config- and
@@ -52,6 +53,7 @@ const METADATA: Record<string, { contextWindow: number; maxTokens: number; image
 	[NEMOTRON]: { contextWindow: 1_048_576, maxTokens: 1_048_575 },
 	[QWEN]: { contextWindow: 262_144, maxTokens: 262_143 },
 	[KIMI]: { contextWindow: 1_048_576, maxTokens: 1_048_575 },
+	[KIMI_PRO]: { contextWindow: 1_048_576, maxTokens: 1_048_575 },
 };
 // https://console.river.ai/api/public/pricing (inference, not training_and_sampling)
 const PRICING: Record<string, { input: number; output: number; cacheRead: number; cacheWrite: number }> = {
@@ -62,6 +64,7 @@ const PRICING: Record<string, { input: number; output: number; cacheRead: number
 	[NEMOTRON]: { input: 0.07, output: 0.37, cacheRead: 0.024, cacheWrite: 0 },
 	[QWEN]: { input: 0.10, output: 2.00, cacheRead: 0.02, cacheWrite: 0 },
 	[KIMI]: { input: 3.00, output: 15.00, cacheRead: 0.30, cacheWrite: 0 },
+	[KIMI_PRO]: { input: 2.00, output: 10.00, cacheRead: 0.20, cacheWrite: 0 },
 };
 
 // /v1/models under-reports what the key can call (verified 2026-11-03: every docs-listed
@@ -98,8 +101,8 @@ export function riverThinking(id: string): { effort: boolean; map?: Record<strin
 	if (id === QWEN) {
 		return { effort: true, map: { off: "none", minimal: null, low: "low", medium: "medium", high: null, xhigh: "xhigh", max: null } };
 	}
-	if (id === KIMI) {
-		return { effort: true, map: { off: "none", minimal: null, low: null, medium: null, high: null, xhigh: null, max: "max" } };
+	if (id === KIMI || id === KIMI_PRO) {
+		return { effort: true, map: { off: "none", minimal: null, low: "low", medium: null, high: "high", xhigh: null, max: "max" } };
 	}
 	return { effort: false };
 }
