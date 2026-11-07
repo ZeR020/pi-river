@@ -1,6 +1,6 @@
 {
   "name": "pi-river",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "River.ai provider for Pi",
   "keywords": [
     "pi-package"
@@ -34,7 +34,7 @@
     "@earendil-works/pi-coding-agent": "*"
   },
   "devDependencies": {
-    "@earendil-works/pi-coding-agent": "^1.4.0",
+    "@earendil-works/pi-coding-agent": "^1.5.0",
     "@types/node": "^24.0.0",
     "typescript": "~5.9.3"
   }
